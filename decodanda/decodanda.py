@@ -609,6 +609,7 @@ class Decodanda:
                 if self.trial_attr is not None:
                     conditioned_trial = getattr(session, self.trial_attr)[mask]
                 elif self.trial_chunk is None:
+                    print('[Decodanda]\tUsing contiguous chunks of the same labels as trials.')
                     conditioned_trial = contiguous_chunking(mask)[mask]
                 else:
                     conditioned_trial = contiguous_chunking(mask, self.trial_chunk)[mask]

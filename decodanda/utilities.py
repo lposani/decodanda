@@ -3,6 +3,7 @@ import scipy.stats
 
 from .imports import *
 
+
 # Classes
 
 
@@ -223,7 +224,7 @@ class FakeSession:
                 for letter in ['A', 'B']:
                     for number in [1, 2]:
                         mask = (self.behaviour_color == color) & (self.behaviour_letter == letter) & (
-                                    self.behaviour_number == number)
+                                self.behaviour_number == number)
                         raster = self.raster[mask, :]
                         average = np.nanmean(raster, 0)
                         resampled_raster = raster - average + np.random.rand(n_neurons) - 0.5
@@ -247,7 +248,7 @@ class Logger:
 
     def log(self, string):
         self.writer = open(self.filename, 'a')
-        self.writer.write(string+'\n')
+        self.writer.write(string + '\n')
         self.writer.close()
 
     def log_stats_nullmodel(self, key, data, null, p):
@@ -261,6 +262,7 @@ class Logger:
     def log_stats(self, key, data, test, stat_name, stat_val, p):
         logtext = f"{key: <25}{'mean %.3f std %.3f n=%u' % (np.nanmean(data), np.nanstd(data), np.sum(np.isnan(data) == 0)): <30}{'%s %s=%.2f' % (test, stat_name, stat_val) : <35}{p_to_text(p):^10}"
         self.log(logtext)
+
 
 # Sampling functions
 
@@ -298,7 +300,7 @@ def sample_training_testing_from_rasters(rasters, ndata, training_fraction, tria
                 visualize_raster(r, ax=axs[0])
                 axs[1].plot(training_mask, label='training')
                 axs[1].plot(testing_mask, label='testing')
-                axs[1].plot(trials[i]/np.max(trials[i]), color='k')
+                axs[1].plot(trials[i] / np.max(trials[i]), color='k')
                 plt.legend()
                 axs[1].set_xlabel('time')
                 axs[1].set_title('raster %u' % i)
@@ -308,7 +310,7 @@ def sample_training_testing_from_rasters(rasters, ndata, training_fraction, tria
                     i, np.sum(training_mask), len(np.unique(trials[i][training_mask])),
                     np.sum(testing_mask), len(np.unique(trials[i][testing_mask]))
                 ))
-            
+
             if randomstate is None:
                 sampling_index_training = np.random.randint(0, np.sum(training_mask), ndata)
                 sampling_index_testing = np.random.randint(0, np.sum(testing_mask), ndata)
@@ -333,7 +335,8 @@ def training_test_block_masks(T, training_fraction, trials, randomstate=None, de
     unique_trial_numbers = np.unique(trials)
     nutn = len(unique_trial_numbers)
     if testing_trials is None:
-        if nutn * (1. - training_fraction) <= 1:  # in the case of very small number of trials, use all but one for training
+        if nutn * (
+                1. - training_fraction) <= 1:  # in the case of very small number of trials, use all but one for training
             if randomstate is None:
                 testing_trials = unique_trial_numbers[np.random.choice(nutn, size=1, replace=False)]
             else:
@@ -341,10 +344,10 @@ def training_test_block_masks(T, training_fraction, trials, randomstate=None, de
         else:
             if randomstate is None:
                 testing_trials = unique_trial_numbers[
-                    np.random.choice(nutn, size=ceil(nutn * (1.-training_fraction)), replace=False)]
+                    np.random.choice(nutn, size=ceil(nutn * (1. - training_fraction)), replace=False)]
             else:
                 testing_trials = unique_trial_numbers[
-                    randomstate.choice(nutn, size=ceil(nutn * (1.-training_fraction)), replace=False)]
+                    randomstate.choice(nutn, size=ceil(nutn * (1. - training_fraction)), replace=False)]
         if debug:
             print("Testing trials:")
             print(testing_trials)
@@ -500,23 +503,22 @@ def distance_from_plane(p1, p2, p3, point):
         np.sqrt(np.dot(p1 - p3, p1 - p3)),
     ]
     interd = np.nanmean(interdistances)
-    return d/interd
+    return d / interd
 
 
 def interplanar_distance(centroids):
-
     interdistances = []
     for i in range(len(centroids)):
-        for j in range(i+1, len(centroids)):
-            v = centroids[i]-centroids[j]
+        for j in range(i + 1, len(centroids)):
+            v = centroids[i] - centroids[j]
             interdistances.append(np.sqrt(np.dot(v, v)))
 
-    md = np.sqrt(6)/3.
+    md = np.sqrt(6) / 3.
 
-    planar_distances = [distance_from_plane(centroids[0], centroids[1], centroids[2], centroids[3])/md,
-                        distance_from_plane(centroids[1], centroids[2], centroids[3], centroids[0])/md,
-                        distance_from_plane(centroids[2], centroids[3], centroids[0], centroids[1])/md,
-                        distance_from_plane(centroids[3], centroids[0], centroids[1], centroids[2])/md]
+    planar_distances = [distance_from_plane(centroids[0], centroids[1], centroids[2], centroids[3]) / md,
+                        distance_from_plane(centroids[1], centroids[2], centroids[3], centroids[0]) / md,
+                        distance_from_plane(centroids[2], centroids[3], centroids[0], centroids[1]) / md,
+                        distance_from_plane(centroids[3], centroids[0], centroids[1], centroids[2]) / md]
 
     return planar_distances
 
@@ -573,7 +575,7 @@ def corr_dissimilarity(X):
     ndim = X.shape[0]
     D = np.zeros((ndim, ndim))
     for i in range(ndim):
-        for j in range(i+1, ndim):
+        for j in range(i + 1, ndim):
             D[i, j] = 1 - scipy.stats.pearsonr(X[i], X[j])[0]
             D[j, i] = D[i, j]
     print(D.shape)
@@ -584,7 +586,7 @@ def cosyne_dissimilarity(X):
     ndim = X.shape[0]
     D = np.zeros((ndim, ndim))
     for i in range(ndim):
-        for j in range(i+1, ndim):
+        for j in range(i + 1, ndim):
             D[i, j] = 1. / cossim(X[i], X[j])
             D[j, i] = D[i, j]
     print(D.shape)
@@ -592,7 +594,7 @@ def cosyne_dissimilarity(X):
 
 
 def cossim(x, y):
-    return np.dot(x, y)/(np.dot(x, x)*np.dot(y, y))
+    return np.dot(x, y) / (np.dot(x, x) * np.dot(y, y))
 
 
 def mahalanobis_dissimilarity(d):
@@ -611,8 +613,8 @@ def mahalanobis_dissimilarity(d):
     D = np.zeros((ndim, ndim))
     # compute mahalanobis
     for i in range(ndim):
-        for j in range(i+1, ndim):
-            D[i, j] = 0.5*(mahalanobis(rs[i], rs[j], Cs[i]) + mahalanobis(rs[i], rs[j], Cs[j]))
+        for j in range(i + 1, ndim):
+            D[i, j] = 0.5 * (mahalanobis(rs[i], rs[j], Cs[i]) + mahalanobis(rs[i], rs[j], Cs[j]))
             D[j, i] = D[i, j]
 
     return D
@@ -648,7 +650,7 @@ def equalize_ax(ax):
     z_middle = np.mean(z_limits)
     # The plot bounding box is a sphere in the sense of the infinity
     # norm, hence I call half the max range the plot radius.
-    plot_radius = 0.5*max([x_range, y_range, z_range])
+    plot_radius = 0.5 * max([x_range, y_range, z_range])
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
@@ -678,6 +680,7 @@ def log_dichotomy(dec, dic, ndata, s='Decoding'):
             '\n\t\t%s\n\t\t\t\t\tvs.\t\t\t\t\t\n\t\t%s'
             % (s, ndata, len(dec.subset), dec.n_brains, label_A, label_B))
 
+
 def destroy_time_correlations(array):
     # array is TxN features
     new_array = np.transpose(array)
@@ -698,14 +701,15 @@ def visualize_raster(raster, ax='auto', offset=0, order=None, colors=None):
 
     allmax = np.nanmax(raster)
     for i in range(raster.shape[1]):
-        ax.plot(raster[:, order[i]]/allmax * 2 + i)
+        ax.plot(raster[:, order[i]] / allmax * 2 + i)
     return ax
+
 
 # Histogram comparison
 
 def histogram_comparison(Adata, Bdata, labelA, labelB, quantity, bins=None, ax=None):
-    A = Adata[np.isnan(Adata)==0]
-    B = Bdata[np.isnan(Bdata)==0]
+    A = Adata[np.isnan(Adata) == 0]
+    B = Bdata[np.isnan(Bdata) == 0]
 
     allmax = np.max([np.nanmax(A), np.nanmax(B)])
     allmin = np.min([np.nanmin(A), np.nanmin(B)])
@@ -736,10 +740,11 @@ def histogram_comparison(Adata, Bdata, labelA, labelB, quantity, bins=None, ax=N
     ax.legend()
 
     ax.plot([np.nanmean(A), np.nanmean(A)], [0, kdeA(np.nanmean(A))], color=pltcolors[0], linewidth=2, linestyle='--')
-    ax.text(np.nanmean(A), kdeA(np.nanmean(A))*1.1, 'mean=%.2f' % np.nanmean(A), color=pltcolors[0])
+    ax.text(np.nanmean(A), kdeA(np.nanmean(A)) * 1.1, 'mean=%.2f' % np.nanmean(A), color=pltcolors[0])
 
     ax.plot([np.nanmean(B), np.nanmean(B)], [0, kdeB(np.nanmean(B))], color=pltcolors[1], linewidth=2, linestyle='--')
-    ax.text(np.nanmean(B), kdeB(np.nanmean(B))*1.1, 'mean=%.2f' % np.nanmean(B), color=pltcolors[1])
+    ax.text(np.nanmean(B), kdeB(np.nanmean(B)) * 1.1, 'mean=%.2f' % np.nanmean(B), color=pltcolors[1])
+
 
 # Box comparison 2 suite
 
@@ -747,44 +752,51 @@ def draw_pair_plot(data1, data2, x1, x2, ax, swarm=False):
     for i in range(len(data1)):
         ax.plot([x1, x2], [data1[i], data2[i]], color=pltcolors[0], alpha=0.8, linewidth=1)
     if swarm:
-        plt.errorbar([x1, x2], [np.nanmean(data1), np.nanmean(data2)], [np.nanstd(data1)/np.sqrt(np.sum(np.isnan(data1))==0), np.nanstd(data2)/np.sqrt(np.sum(np.isnan(data2))==0)], linestyle='', marker='o', color=pltcolors[0])
+        plt.errorbar([x1, x2], [np.nanmean(data1), np.nanmean(data2)],
+                     [np.nanstd(data1) / np.sqrt(np.sum(np.isnan(data1)) == 0),
+                      np.nanstd(data2) / np.sqrt(np.sum(np.isnan(data2)) == 0)], linestyle='', marker='o',
+                     color=pltcolors[0])
+
 
 def print_stats(data, name):
     d = np.asarray(data)
     m = np.nanmean(d)
     std = np.nanstd(d)
-    stder = scipy.stats.sem(d[np.isnan(d)==0])
+    stder = scipy.stats.sem(d[np.isnan(d) == 0])
     print("O> %s :\tmean %.3f +- %.3f SEM, std: %.3f" % (name, m, stder, std))
 
-def annotate_ttest_p(dataA, dataB, x1, x2, ax, pairplot=False, force=False, p=-1, h='max'):
 
+def annotate_ttest_p(dataA, dataB, x1, x2, ax, pairplot=False, force=False, p=-1, h='max'):
     if pairplot:
         data1 = np.asarray(dataA)[(np.isnan(dataA) == 0) & (np.isnan(dataB) == 0)]
         data2 = np.asarray(dataB)[(np.isnan(dataA) == 0) & (np.isnan(dataB) == 0)]
         draw_pair_plot(data1, data2, x1, x2, ax)
-        if p==-1:
+        if p == -1:
             p = scipy.stats.mstats_basic.ttest_rel(data1, data2)[1]
     else:
         data1 = np.asarray(dataA)[np.isnan(dataA) == 0]
         data2 = np.asarray(dataB)[np.isnan(dataB) == 0]
-        if p==-1:
+        if p == -1:
             p = scipy.stats.mstats_basic.ttest_ind(data1, data2)[1]
 
-    if (p<0.05) or (force):
+    if (p < 0.05) or (force):
         if h == 'max':
             ys = [np.min([np.min(data1), np.min(data2)]), np.max([np.max(data1), np.max(data2)])]
         if h == 'std':
-            ys = [np.min([np.nanmean(data1)-np.nanstd(data1), np.nanmean(data2)-np.nanstd(data2)]), np.max([np.nanmean(data1)+np.nanstd(data1), np.nanmean(data2)+np.nanstd(data2)])]
-        y = ys[1] + (ys[1]-ys[0])*0.25
-        dy = (ys[1]-ys[0])*0.05
-        dx = np.abs(x1-x2)*0.02
-        ax.plot([x1+dx, x1+dx, x2-dx, x2-dx], [y, y+dy, y+dy, y], 'k')
-        ax.text((x1+x2)/2., y+2*dy, p_to_text(p), ha='center', va='bottom', color='k', fontsize=7)
+            ys = [np.min([np.nanmean(data1) - np.nanstd(data1), np.nanmean(data2) - np.nanstd(data2)]),
+                  np.max([np.nanmean(data1) + np.nanstd(data1), np.nanmean(data2) + np.nanstd(data2)])]
+        y = ys[1] + (ys[1] - ys[0]) * 0.25
+        dy = (ys[1] - ys[0]) * 0.05
+        dx = np.abs(x1 - x2) * 0.02
+        ax.plot([x1 + dx, x1 + dx, x2 - dx, x2 - dx], [y, y + dy, y + dy, y], 'k')
+        ax.text((x1 + x2) / 2., y + 2 * dy, p_to_text(p), ha='center', va='bottom', color='k', fontsize=7)
         # ax.set_ylim([ys[0], ys[1]+(ys[1]-ys[0])*0.15])
 
     return p
 
-def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False, violin=False, box = False, paired = False, bar=False, p=None, ax=None):
+
+def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False, violin=False, box=False, paired=False,
+                       bar=False, p=None, ax=None):
     print_stats(A, labelA)
     print_stats(B, labelB)
     if ax is None:
@@ -800,7 +812,7 @@ def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False,
     else:
         sns.pointplot(data=data, ax=ax, capsize=.2, join=False, alpha=0.5, marker='none', color='k')
     if swarm:
-        if paired==0:
+        if paired == 0:
             sns.swarmplot(data=data, ax=ax, color='0.5', alpha=0.6)
     if violin:
         sns.violinplot(data=data, ax=ax, color='0.5', alpha=0.3)
@@ -810,7 +822,6 @@ def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False,
     ax.set_ylabel(quantity)
     if paired:
         nanmask = (np.isnan(A) == 0) & (np.isnan(B) == 0)
-        p1 = annotate_ttestpaired_p(A[nanmask], B[nanmask], 0, 1, ax, force=force)
         pw = scipy.stats.wilcoxon(A[nanmask], B[nanmask])[1]
         pt = scipy.stats.ttest_rel(A[nanmask], B[nanmask])[1]
 
@@ -822,9 +833,64 @@ def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False,
         if p is None:
             p1 = annotate_ttest_p(A, B, 0, 1, ax, force=force)
             print("Un-paired t-test (%s)-(%s):\t%s" % (labelA, labelB, p_to_text(p1)))
-            print("Number of data %s: %u, %s: %u\n" % (labelA, np.sum(np.isnan(A)==0), labelB, np.sum(np.isnan(B)==0)))
+            print("Number of data %s: %u, %s: %u\n" % (
+                labelA, np.sum(np.isnan(A) == 0), labelB, np.sum(np.isnan(B) == 0)))
         else:
             annotate_ttest_p(A, B, 0, 1, ax, force=force, p=p)
     sns.despine()
 
     return ax
+
+
+# Synthetic data
+
+
+def generate_AB_activity(n_neurons, n_trials, separation, labelA='A', labelB='B'):
+    coding_level = 0.25
+    # generate activity for stimulus A
+    mean_A = np.random.rand(n_neurons) * separation  # define the mean
+    cov_A = np.eye(n_neurons)  # unitary diagonal covariance matrix
+
+    activity_A = np.random.multivariate_normal(
+        mean_A, cov_A, int(n_trials / 2))  # just sample from the gaussian
+    activity_A = (np.abs(activity_A) < coding_level).astype(float)
+
+    # generate activity for stimulus B
+    mean_B = np.random.rand(n_neurons) * separation
+    cov_B = np.eye(n_neurons)
+
+    activity_B = np.random.multivariate_normal(
+        mean_B, cov_B, int(n_trials / 2))
+    activity_B = (np.abs(activity_B) < coding_level).astype(float)
+
+    # put the activity together
+    V1_activity = np.vstack([activity_A, activity_B])
+    stimulus_labels = np.hstack([np.repeat(labelA, int(n_trials / 2)), np.repeat(labelB, int(n_trials / 2))])
+    # order the activity for plotting purposes
+    selectivity = np.mean(activity_A, 0) - np.mean(activity_B, 0)
+    order = np.argsort(selectivity)
+    V1_activity = V1_activity[:, order]
+
+    # return activity and labels
+    return V1_activity, stimulus_labels
+
+
+# visualization
+def visualize_AB_activity(labels, activity):
+    uniquelabs = np.unique(labels)
+    n_trials, n_neurons = activity.shape
+    f, ax = plt.subplots(figsize=(10, 5))
+    ax.set_xlabel('Trial')
+    ax.set_ylabel('Neuron #')
+    sns.despine(ax=ax)
+    ax.text(n_trials / 2, n_neurons * 1.1, 'Trial label', ha='center', fontsize=8)
+    for t in range(n_trials):
+        if labels[t] == uniquelabs[0]:
+            ax.text(t, n_neurons * 1.05, uniquelabs[0], color='r', fontsize=6)
+        if labels[t] == uniquelabs[1]:
+            ax.text(t, n_neurons * 1.05, uniquelabs[1], color='b', fontsize=6)
+    for i in range(int(n_neurons)):
+        nanact = np.copy(activity[:, i])
+        nanact[nanact == 0] = np.nan
+        ax.plot(i + nanact, marker='|', linestyle='', color='k', alpha=0.5, markersize=3)
+    return f, ax
