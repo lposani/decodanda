@@ -17,12 +17,10 @@ setup(
         'matplotlib>=3.3.4', 'numpy>=1.20.1', 'pandas>=1.4.0', 'scikit_learn>=0.24.1',
         'scipy>=1.6.1', 'seaborn>=0.11.1', 'tqdm>=4.58.0'],
     keywords=['python', 'decoding', 'neuroscience', 'ccgp', 'neural activity', 'population activity', 'neural decoding'],
+    url="https://github.com/pypa/sampleproject",
     classifiers=[
-        "Development Status :: 3 - Alpha",
-        "Intended Audience :: Education",
-        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: Microsoft :: Windows",
-    ]
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
 )
