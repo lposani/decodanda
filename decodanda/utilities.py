@@ -894,3 +894,43 @@ def visualize_AB_activity(labels, activity):
         nanact[nanact == 0] = np.nan
         ax.plot(i + nanact, marker='|', linestyle='', color='k', alpha=0.5, markersize=3)
     return f, ax
+
+
+def visualize_data_vs_null(data, null, value, ax=None):
+    # computing the P value of the z-score
+    from scipy.stats import norm
+    null_mean = np.nanmean(null)
+    z = (data - null_mean) / np.nanstd(null)
+    p = norm.sf(abs(z))
+
+    def p_to_ast(p):
+        if p < 0.001:
+            return '***'
+        if p < 0.01:
+            return '**'
+        if p < 0.05:
+            return '*'
+        if p >= 0.05:
+            return 'ns'
+
+    # visualizing
+    if ax is None:
+        f, ax = plt.subplots(figsize=(6, 3))
+    kde = scipy.stats.gaussian_kde(null)
+    null_x = np.linspace(np.nanmean(null)-5*np.nanstd(null), np.nanmean(null)+5*np.nanstd(null), 100)
+    null_y = kde(null_x)
+    ax.plot(null_x, null_y, color='k', alpha=0.5)
+    ax.fill_between(null_x, null_y, color='k', alpha=0.3)
+    ax.text(null_x[np.argmax(null_y)], np.max(null_y) * 1.05, 'null model', ha='center')
+    sns.despine(ax=ax)
+    ax.plot([data, data], [0, np.max(null_y)], color='red', linewidth=3)
+    ax.text(data, np.max(null_y) * 1.05, 'data', ha='center', color='red')
+    ax.set_xlabel(value)
+    if data < np.nanmean(null):
+        ax.text(0.85, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
+    else:
+        ax.text(0.15, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
+
+    ax.plot(null, np.zeros(len(null)), linestyle='', marker='|', color='k')
+    _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)], color='k', linestyle='--')
+    return z, p
