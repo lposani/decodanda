@@ -6,7 +6,7 @@ The best practices handled by the package include:
 - Creation of pseudo-population data
 - Null model to test significance of the performance
 - Disentangling individual variables
-- When handling multiple variables, ```Decodanda``` balances the data so to disentangle the individual variables and avoid the confounding effects of correlated conditions.
+- When handling multiple variables, ```Decodanda``` balances the data to disentangle the individual variables and avoid the confounding effects of correlated conditions.
 
 Please refer to ```examples.ipynb``` for some usage examples.
 
