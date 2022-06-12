@@ -1,11 +1,10 @@
-```Decodanda``` is a best-practices-made-easy Python package for decoding in neuroscience. 
+```Decodanda``` is a best-practices-made-easy Python package for population activity decoding in neuroscience. 
 
-The best practices handled by the package include:
+Some of the best practices handled by the package include:
 - Balancing classes
 - Cross validation
 - Creation of pseudo-population data
 - Null model to test significance of the performance
-- Disentangling individual variables
 - When handling multiple variables, ```Decodanda``` balances the data to disentangle the individual variables and avoid the confounding effects of correlated conditions.
 
 Please refer to ```examples.ipynb``` for some usage examples.
