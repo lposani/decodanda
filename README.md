@@ -40,6 +40,8 @@ In the case of N neurons and T trials (or time bins), each session must contain:
 
 For example, if we want to decode the variable ```letter```, which takes values ```A, B``` from simultaneous recordings of N neurons x T trials we will have:
 ```python
+from decodanda import Decodanda
+
 session = {
     'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
     'letter': ['A', 'A', 'B', ..., 'B'],               # <Tx1 array>, labels
