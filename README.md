@@ -1,6 +1,9 @@
-```Decodanda``` is a best-practices-made-easy Python package for population activity decoding in neuroscience. 
+# Decodanda
+<hr>
 
-Some of the best practices handled by the package include:
+Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") is a best-practices-made-easy Python package for population activity decoding in neuroscience. 
+
+Some of the best practices handled by Decodanda include:
 - Balancing classes
 - Cross validation
 - Creation of pseudo-population data
@@ -15,10 +18,20 @@ For any feedback, please contact me through [this module](https://forms.gle/iifp
 
 
 Have fun!
-
-
 ## Getting started
+
+### Install
+<hr>
+To install Decodanda, run
+
+```bash
+python3 setup.py
+```
+
+from the home folder of the package. It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/tutorials/installing-packages/#creating-and-using-virtual-environments) to manage packages and dependencies.
+
 ### Decoding one variable from neural activity
+<hr>
 
 All decoding functions are implemented as methods of the ```Decodanda``` class. 
 The constructor of this class takes two main objects:
@@ -79,15 +92,23 @@ which outputs
 <br/>
 
 ### Decoding multiple variables from neural activity
+<hr>
+
 TODO
 
 ### Balance behavior to compare decoding performances
+<hr>
+
 TODO
 
 ### Decoding from pseudo-populations data 
+<hr>
+
 TODO
 
 ### CCGP 
+<hr>
+
 TODO
 
 ### `Decodanda()` constructor parameters
