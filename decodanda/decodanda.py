@@ -7,7 +7,7 @@ from .visualize import *
 
 class Decodanda:
     def __init__(self,
-                 sessions,
+                 data,
                  conditions,
                  classifier='svc',
                  neural_attr='raster',
@@ -27,29 +27,29 @@ class Decodanda:
         """
         Class that prepares the data for balanced cross-validated decoding.
 
-        :param sessions:
+        :param data:
         :param conditions: List
         should be a list of pairs of functions, each corresponding to a semantic variable that can take two values.
         Example:
         """
 
         # casting single session to a list so that it is compatible with all loops below
-        if type(sessions) != list:
-            sessions = [sessions]
+        if type(data) != list:
+            data = [data]
 
         # handling dictionaries as sessions
-        if type(sessions[0]) == dict:
+        if type(data[0]) == dict:
             dict_sessions = []
-            for session in sessions:
+            for session in data:
                 dict_sessions.append(DictSession(session))
-            sessions = dict_sessions
+            data = dict_sessions
 
         # handling discrete dict conditions
         if type(list(conditions.values())[0]) == list:
             conditions = generate_binary_conditions(conditions)
 
         # setting input parameters
-        self.sessions = sessions
+        self.data = data
         self.conditions = conditions
         if classifier == 'svc':
             classifier = LinearSVC(dual=False, C=1.0, class_weight='balanced', max_iter=5000)
@@ -71,10 +71,10 @@ class Decodanda:
         self.exclude_contiguous_trials = exclude_contiguous_chunks
 
         # setting session(s) data
-        self.n_sessions = len(sessions)
+        self.n_sessions = len(data)
         self.timebin = np.nan
-        if hasattr(sessions[0], 'timebin'):
-            self.timebin = sessions[0].timebin
+        if hasattr(data[0], 'timebin'):
+            self.timebin = data[0].timebin
         self.n_conditions = len(conditions)
 
         self.max_conditioned_data = 0
@@ -105,7 +105,7 @@ class Decodanda:
         self.conditioned_trial_index = {string_bool(w): [] for w in self.condition_vectors}
 
         #   >>> main part: create conditioned arrays <<<
-        self._divide_data_into_conditions(sessions)
+        self._divide_data_into_conditions(data)
 
         if zscore:
             self._zscore_activity()

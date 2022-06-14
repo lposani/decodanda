@@ -42,7 +42,7 @@ conditions = {
 }
 
 svc_2 = SVC(C=1.0, kernel='poly', degree=3, gamma=2)
-mydec = Decodanda(sessions=[s1, s2],
+mydec = Decodanda(data=[s1, s2],
                   conditions=conditions,
                   verbose=True,
                   classifier=svc_2)
