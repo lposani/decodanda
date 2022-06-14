@@ -25,7 +25,7 @@ Have fun!
 To install Decodanda, run
 
 ```bash
-python3 setup.py
+python3 setup.py install
 ```
 
 from the home folder of the package. It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/tutorials/installing-packages/#creating-and-using-virtual-environments) to manage packages and dependencies.

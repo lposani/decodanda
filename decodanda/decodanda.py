@@ -21,7 +21,8 @@ class Decodanda:
                  verbose=False,
                  zscore=False,
                  fault_tolerance=False,
-                 debug=False
+                 debug=False,
+                 **kwargs
                  ):
 
         """
