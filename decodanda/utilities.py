@@ -123,7 +123,7 @@ class FakeSession:
         self.behaviour_letter = np.zeros(ndata, dtype=object)
         self.behaviour_number = np.zeros(ndata, dtype=object)
         self.behaviour_color = np.zeros(ndata, dtype=object)
-
+        self.trial = np.arange(ndata)
         self.timebin = 1.0
         self.name = 'SessioneFinta1.0'
         n_let = int(n_neurons / 3)
