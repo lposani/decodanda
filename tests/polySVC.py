@@ -49,3 +49,4 @@ mydec = Decodanda(sessions=[s1, s2],
 
 mydec.decode(training_fraction=0.7, cross_validations=8, nshuffles=5, plot=True)
 mydec.CCGP(plot=True, nshuffles=5)
+plt.show()
