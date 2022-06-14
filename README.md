@@ -40,9 +40,9 @@ In the case of N neurons and T trials (or time bins), each session must contain:
 For example, if we want to decode the variable ```letter```, which takes values ```A, B``` from simultaneous recordings of N neurons x T trials we will have:
 ```python
 session = {
-    'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]]   # <TxN array>, neural activations 
-    'letter': ['A', 'A', 'B', ..., 'B']               # <Tx1 array>, labels
-    'trial':  [1, 2, 3, ..., T]                       # <Tx1 array>, trial number
+    'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
+    'letter': ['A', 'A', 'B', ..., 'B'],               # <Tx1 array>, labels
+    'trial':  [1, 2, 3, ..., T],                       # <Tx1 array>, trial number
 }
 
 conditions = {
@@ -65,7 +65,7 @@ performances, null = my_decodanda.decode(
                         nshuffles=20)           # number of null model iterations
 ```
 which outputs
-```python
+```text
 >>> performances
 {'letter': 0.84}
 >>> null
