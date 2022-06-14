@@ -69,7 +69,7 @@ which outputs
 >>> performances
 {'letter': 0.84}
 >>> null
-{'letter'" [0.55, 0.43, 0.57 ... 0.52]}  # 20 values
+{'letter' [0.55, 0.43, 0.57 ... 0.52]}  # 20 values
 ```
 
 
