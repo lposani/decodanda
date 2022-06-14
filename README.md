@@ -18,6 +18,7 @@ Have fun!
 
 
 ## Getting started
+### Decoding one variable from neural activity
 
 All decoding functions are implemented as methods of the ```Decodanda``` class. 
 The constructor of this class takes two main objects:
@@ -51,12 +52,11 @@ conditions = {
 
 my_decodanda = Decodanda(
                 sessions=session,
-                conditions=conditions,
-                trial_attr='trial')
+                conditions=conditions)
 
 ```
 
-To start the decoding analysis, just call the ```decode()``` method
+We can decode `letter` from the activity by calling the ```decode()``` method
 
 ```python
 performances, null = my_decodanda.decode(
@@ -67,14 +67,26 @@ performances, null = my_decodanda.decode(
 which outputs
 ```text
 >>> performances
-{'letter': 0.84}
+{'letter': 0.84}  # mean decoding performance over the cross_validations folds
 >>> null
-{'letter' [0.55, 0.43, 0.57 ... 0.52]}  # 20 values
+{'letter' [0.55, 0.43, 0.57 ... 0.52]}  # nshuffles (20) values
 ```
 
 
 
 <br/>
+
+### Decoding multiple variables from neural activity
+TODO
+
+### Balance behavior to compare decoding performances
+TODO
+
+### Decoding from pseudo-populations data 
+TODO
+
+### CCGP 
+TODO
 
 ### `Decodanda()` constructor parameters
 
