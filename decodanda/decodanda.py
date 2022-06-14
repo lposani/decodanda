@@ -437,7 +437,7 @@ class Decodanda:
         else:
             data_performance = np.nanmean(d_performances)
 
-        if self.verbose:
+        if self.verbose and nshuffles:
             print(
                 "\n[decode_with_nullmodel]\t data <p> = %.2f" % np.nanmean(d_performances))
             print('\n[decode_with_nullmodel]\tLooping over null model shuffles.')
@@ -468,10 +468,8 @@ class Decodanda:
         else:
             ccgp = np.nanmean(performances)
 
-        if self.verbose:
+        if self.verbose and nshuffles:
             print("\t\t[CCGP_with_nullmodel]\t\t----- Data: <p> = %.2f -----\n" % np.nanmean(performances))
-            count = tqdm(range(nshuffles))
-        elif nshuffles:
             count = tqdm(range(nshuffles))
         else:
             count = range(nshuffles)
