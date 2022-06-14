@@ -7,11 +7,11 @@ Some of the best practices handled by the package include:
 - Null model to test significance of the performance
 - When handling multiple variables, ```Decodanda``` balances the data to disentangle the individual variables and avoid the confounding effects of correlated conditions.
 
-Please refer to ```examples.ipynb``` for some usage examples.
+Please refer to [examples.ipynb](https://github.com/lposani/decodanda/blob/master/examples.ipynb) for some usage examples.
 
-For a guided explanation of some of the best practices implemented by Decodanda, you can refer to my teaching material for the Advanced Theory Course in Neuroscience at Columbia University: https://tinyurl.com/ArtDecod
+For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
-For any feedback, please contact me through this module: https://forms.gle/iifpsAAPuRBbYzxJ6
+For any feedback, please contact me through [this module](https://forms.gle/iifpsAAPuRBbYzxJ6).
 
 
 Have fun!
