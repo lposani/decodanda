@@ -563,7 +563,7 @@ class Decodanda:
                     mask = mask & mask_i
                 total_mask = total_mask | mask
 
-            min_activity_mask = np.sum(array[total_mask] > 0, 0) > self.min_activations_per_cell
+            min_activity_mask = np.sum(array[total_mask] > 0, 0) >= self.min_activations_per_cell
 
             for condition_vec in self.condition_vectors:
                 # get the array from the session object
