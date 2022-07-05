@@ -1,9 +1,11 @@
 # Decodanda
 <hr>
 
-Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") is a best-practices-made-easy Python package for decoding neural population activity.
+Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") is a best-practices-made-easy Python package for decoding neural data.
 
-Some of the best practices handled by Decodanda include:
+Decodanda is designed to expose a user-friendly and flexible interface while implementing the best practices to avoid the most common pitfalls in population activity decoding.
+
+Some of the best practices implemented in Decodanda are:
 - Balancing classes
 - Cross validation
 - Creation of pseudo-population data
@@ -51,30 +53,30 @@ In the case of N neurons and T trials (or time bins), each data dictionary must 
 
 - ```conditions```: a dictionary specifying what variable(s) and what values we want to decode from the data.
 
-For example, if we want to decode the variable ```letter```, which takes values ```A, B``` from simultaneous recordings of N neurons x T trials we will have:
+For example, if we want to decode the variable ```stimulus```, which takes values ```A, B``` from simultaneous recordings of N neurons x T trials we will have:
 ```python
 from decodanda import Decodanda
 
 data = {
     'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
-    'letter': ['A', 'A', 'B', ..., 'B'],               # <Tx1 array>, labels
+    'stimulus': ['A', 'A', 'B', ..., 'B'],             # <Tx1 array>, labels
     'trial':  [1, 2, 3, ..., T],                       # <Tx1 array>, trial number
 }
 
 conditions = {
-    'letter': ['A', 'B']
+    'stimulus': ['A', 'B']
 }
 
-my_decodanda = Decodanda(
-                data=data,
-                conditions=conditions)
+dec = Decodanda(
+        data=data,
+        conditions=conditions)
 
 ```
 
-We can decode `letter` from the activity by calling the ```decode()``` method
+To perform the cross-validated decoding analysis for `stimulus`, call the ```decode()``` method
 
 ```python
-performances, null = my_decodanda.decode(
+performances, null = dec.decode(
                         training_fraction=0.5,  # fraction of trials used for training
                         cross_validations=10,   # number of cross validation folds
                         nshuffles=20)           # number of null model iterations
@@ -82,9 +84,9 @@ performances, null = my_decodanda.decode(
 which outputs
 ```text
 >>> performances
-{'letter': 0.84}  # mean decoding performance over the cross_validations folds
+{'stimulus': 0.84}  # mean decoding performance over the cross_validations folds
 >>> null
-{'letter' [0.55, 0.43, 0.57 ... 0.52]}  # nshuffles (20) values
+{'stimulus' [0.55, 0.43, 0.57 ... 0.52]}  # nshuffles (20) values
 ```
 
 
@@ -94,7 +96,42 @@ which outputs
 ### Decoding multiple variables from neural activity
 <hr>
 
-TODO
+It often happens that different conditions in an experiment are correlated to each other. 
+For example, in a simple stimulus to action association task (```stimulus: A``` -> ```action: left```; ```stimulus: B``` -> ```action: right```), the action performed by a trained subject would clearly be correlated to the presented stimulus.
+
+This correlation makes it hard to drawn conclusions from the results of a decoding analysis, as a good performance for one variable could in fact be due to the recorded activity responding to the other variable: in the example above, one would be able to decode ```action``` from a brain region that only represents ```stimulus```, and viceversa.
+
+To disentangle variables from each other and avoid the confounding effect of correlated conditions, Decodanda implements a multi-variable balanced sampling in the ```decode()``` function.
+In practice, the traning and testing data are sampled by making sure that all the values of the other variables are balanced. 
+
+Taking from the example above, the ```decode()``` function will first create training and testing data for ```stimulus: A``` and ```stimulus: B```, each containing a 50%-50% mix of ```action: left``` and ```action: right```. 
+It will then run the cross-validated decoding analysis as explained above.
+The result will therefore be informative on whether the recorded activity responds to the variable ```stimulus``` alone, independently on ```action```.
+
+To make Decodanda balance two or more variables, the ```conditions``` dictionary must contain two or more ```key: values``` associations, each representing a variable name and its two values.
+
+```python
+from decodanda import Decodanda
+
+data = {
+    'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
+    'stimulus': ['A', 'A', 'B', ..., 'B'],             # <Tx1 array>, values of the stimulus variable
+    'action': ['left', 'left', 'right', ..., 'left'], # <Tx1 array>, values of the action variable
+    'trial':  [1, 2, 3, ..., T],                       # <Tx1 array>, trial number
+}
+
+conditions = {
+    'stimulus': ['A', 'B'],
+    'action': ['left', 'right']
+}
+
+dec = Decodanda(
+        data=data,
+        conditions=conditions)
+
+
+
+```
 
 ### Balance behavior to compare decoding performances
 <hr>
@@ -119,7 +156,7 @@ TODO
 | `conditions`                | `dict`                                                                                                                                                                    | A dictionary that specifies which values for which variables of `data` we want to decode, in the form `{key: [value1, value2]}` <br/><br/>If more than one variable is specified, `Decodanda` will balance all conditions during each decoding analysis to disentangle the variables and avoid confounding correlations.                                                                                                                                                                                                                                                                                                                        |
 | `classifier`                | Possibly a `scikit-learn` classifier, but any object that exposes `.fit()`, `.predict()`, and `.score()` methods should work. <br/><br/> default: `sklearn.svm.LinearSVC` | The classifier used for all decoding analyses                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `neaural_attr`              | `string` <br/><br/> default: `'raster'`                                                                                                                                   | The key of the neural features in the `data` dictionary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `trial_attr`                | `string` or `None`                                                                                                                                                        | The key of the trial attribute in the `data` dictionary. Each different trial is considered as an independent sample to be used in the cross validation routine, i.e., vectors with the same trial number always goes in either the training or the testing batch. If `None`: each contiguous chunk of the same values of all variables will be considered an individual trial.                                                                                                                                                                                                                                                                 |
+| `trial_attr`                | `string` or `None` <br/><br/> default: `'trial'`                                                                                                                          | The key of the trial attribute in the `data` dictionary. Each different trial is considered as an independent sample to be used in the cross validation routine, i.e., vectors with the same trial number always goes in either the training or the testing batch. If `None`: each contiguous chunk of the same values of all variables will be considered an individual trial.                                                                                                                                                                                                                                                                 |
 | `trial chunk`               | `int` or `None` <br/><br/>default: `None`                                                                                                                                 | Only used when `trial_attr=None`. The maximum number of consecutive data points with the same value of all variables that are numbered with the same trial number.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `exclude_contiguous_chunks` | `bool`<br/><br/>default: `False`                                                                                                                                          | Only used when `trial_attr=None` and `trial_chunks != None`. Discards trials, defined as chunks of `trial_chunk` data each with the same variable values, that are consecutive in time. Useful to avoid decoding temporal artifacts when there are long auto-correlation times in the neural activations (e.g., calcium imaging)                                                                                                                                                                                                                                                                                                                |
 | `min_data_per_condition`    | `int`<br/><br/>default: 2                                                                                                                                                 | The minimum number of data points per each *condition*, defined as a specific combination of variable values, that a data set needs to have to be included in the analysis. In the case of pseudo-simultaneous data, datasets that do not meet this criterion will be excluded from the analysis. If no datasets meet the criterion, the constructor will raise an error.                                                                                                                                                                                                                                                                       |
