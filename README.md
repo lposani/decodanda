@@ -1,7 +1,7 @@
 # Decodanda
 <hr>
 
-Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") is a best-practices-made-easy Python package for population activity decoding in neuroscience. 
+Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") is a best-practices-made-easy Python package for decoding neural population activity.
 
 Some of the best practices handled by Decodanda include:
 - Balancing classes
