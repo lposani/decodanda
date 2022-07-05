@@ -116,7 +116,7 @@ from decodanda import Decodanda
 data = {
     'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
     'stimulus': ['A', 'A', 'B', ..., 'B'],             # <Tx1 array>, values of the stimulus variable
-    'action': ['left', 'left', 'right', ..., 'left'], # <Tx1 array>, values of the action variable
+    'action': ['left', 'left', 'right', ..., 'left'],  # <Tx1 array>, values of the action variable
     'trial':  [1, 2, 3, ..., T],                       # <Tx1 array>, trial number
 }
 
@@ -130,13 +130,55 @@ dec = Decodanda(
         conditions=conditions)
 
 
+# The decode() method will now perform a cross-validated decoding analysis for both variables.
+# The multi-variable balanced sampling will ensure that each variable is decoded independently on the other variables.
 
+performances, null = dec.decode(
+                        training_fraction=0.5,  # fraction of trials used for training
+                        cross_validations=10,   # number of cross validation folds
+                        nshuffles=20)           # number of null model iterations
 ```
-
-### Balance behavior to compare decoding performances
+returns:
+```text
+>>> performances
+{'stimulus': 0.84, 'action': 0.53}  # mean decoding performance over the cross_validations folds
+>>> null
+{'stimulus' [0.55, 0.45 ... 0.52], 'action': [0.54, 0.48, ..., 0.49]}  # 2 x nshuffles (20) values
+```
+From which we can deduce that ```stimulus``` is represented in the neural activity, while ```action``` is not better than chance with a linear classifier.
+### Balance data for different decoding analyses to compare performances
 <hr>
 
-TODO
+Say we have a simple experiment where the subject is presented to four stimuli: ```[A, B, C, D]```.
+We are interested in examining whether the recorded activity responds to A vs. B, and if this distinction is stronger than C vs. D.
+
+As a first analysis, we could use ```Decodanda``` to decode ```stimulus: A``` from ```stimulus: B``` and get a performance, and compare it with the one we obtain by decoding ```stimulus: C``` from ```stimulus: D```:
+
+```python
+dec_AB = Decodanda(
+  data=data,
+  conditions={'stimulus': ['A', 'B']})
+
+dec_CD = Decodanda(
+  data=data,
+  conditions={'stimulus': ['C', 'D']})
+
+decoding_params = {
+  'training_fraction': 0.5,  # fraction of trials used for training
+  'cross_validations': 10,   # number of cross validation folds
+  'nshuffles': 20            # number of null model iterations
+}
+perf_AB, null_AB = dec_AB.decode(**decoding_params)
+perf_CD, null_CD = dec_CD.decode(**decoding_params)
+
+```
+```
+>>> print(perfAB, perfCD)
+0.89, 0.75
+```
+However, in our data stimulus A and stimulus B are presented 100 times, while C and D only 10 times. Therefore, the two decoding performances are not directly comparable.
+
+To 
 
 ### Decoding from pseudo-populations data 
 <hr>
