@@ -145,7 +145,7 @@ returns:
 >>> null
 {'stimulus' [0.55, 0.45 ... 0.52], 'action': [0.54, 0.48, ..., 0.49]}  # 2 x nshuffles (20) values
 ```
-From which we can deduce that ```stimulus``` is represented in the neural activity, while ```action``` is not better than chance with a linear classifier.
+From which we can deduce that ```stimulus``` is represented in the neural activity, while we are not able to decode ```action``` better than chance with a linear classifier approach.
 ### Balance data for different decoding analyses to compare performances
 <hr>
 
