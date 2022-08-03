@@ -433,16 +433,18 @@ def delete_silent_bins(array):
 
 
 def string_bool(x):
-    if type(x) == str:
+    if (type(x) == str) or (type(x) == np.str_):
         values = []
         for s in x:
             values.append(bool(int(s)))
-    elif (type(x) == list) or (type(x) == type(np.zeros(10))):
+    elif (type(x) == list) or (type(x)==type(np.zeros(10))):
         values = ''
         for s in x:
             values += str(s)
     else:
-        raise ValueError('x should either be a string, a list, or a numpy array')
+        print(x, type(x))
+        print('WE HAVE A PROBLEM')
+        raise ValueError('x (type=%s) should either be a string, a list, or a numpy array' % type(x))
     return values
 
 
@@ -467,6 +469,11 @@ def generate_dichotomies(n):
             sets.append([set_A, set_B])
     return dichotomies, sets
 
+
+def semantic_score(dic):
+    d = [string_bool(x) for x in dic[0]]
+    fingerprint = np.abs(np.sum(d, 0) - len(d) / 2)
+    return np.max(fingerprint) * np.sum(fingerprint)
 
 # Analysis
 

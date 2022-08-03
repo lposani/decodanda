@@ -4,42 +4,6 @@ from decodanda.imports import *
 from decodanda.decodanda import Decodanda
 
 
-# Interface to use dictionary semantics instead of data sessions
-
-
-class DictDecodanda(Decodanda):
-    """
-    Interface to use a list of dictionaries as data sets
-
-    """
-
-    def __init__(self, datasets, conditions, neural_attr,
-                 exclude_silent=False, classifier='svc', verbose=False, min_data_per_condition=0):
-        just_a_condition = list(conditions.values())[0]
-        if isinstance(just_a_condition, dict):
-            semantic_conditions = conditions
-        else:
-            semantic_conditions = {}
-            for key in list(conditions.keys()):
-                semantic_conditions[key] = {
-                    str(conditions[key][0]): lambda s, k=key: np.asarray(getattr(s, k)) == conditions[k][0],
-                    str(conditions[key][1]): lambda s, k=key: np.asarray(getattr(s, k)) == conditions[k][1]
-                }
-
-        super().__init__(datasets, semantic_conditions, neural_attr=neural_attr,
-                         classifier=classifier, verbose=verbose, min_data_per_condition=min_data_per_condition,
-                         exclude_silent=exclude_silent)
-
-    # Wrappers for basic decoding functions
-
-    def decode(self, training_fraction, cross_validations=10, nshuffles=10, ndata='auto', plot=False, ax=None):
-        return self.semantic_decode(training_fraction=training_fraction, cross_validations=cross_validations,
-                                    nshuffles=nshuffles, ndata=ndata, plot=plot, ax=ax)
-
-    def CCGP(self, ntrials=3, nshuffles=10, ndata='auto', plot=False, ax=None):
-        return self.semantic_CCGP(ntrials=ntrials, nshuffles=nshuffles, ndata=ndata, plot=plot, ax=ax)
-
-
 # Single neurons analysis functions
 
 def ablation_analysis(self, percentiles, cross_validations=25, training_fraction=0.9, metric='weight',

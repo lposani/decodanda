@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
 from .imports import *
 from .utilities import *
 from .visualize import *
@@ -25,15 +28,6 @@ class Decodanda:
                  debug=False,
                  **kwargs
                  ):
-
-        """
-        Class that prepares the data for balanced cross-validated decoding.
-
-        :param data:
-        :param conditions: List
-        should be a list of pairs of functions, each corresponding to a semantic variable that can take two values.
-        Example:
-        """
 
         # casting single session to a list so that it is compatible with all loops below
         if type(data) != list:
@@ -131,7 +125,6 @@ class Decodanda:
             for w in self.conditioned_rasters.keys():
                 self.ordered_conditioned_rasters[w] = self.conditioned_rasters[w].copy()
                 self.ordered_conditioned_trial_index[w] = self.conditioned_trial_index[w].copy()
-
     # basic decoding functions
 
     def _train(self, training_raster_A, training_raster_B, label_A, label_B, shuffled=False):
@@ -167,6 +160,15 @@ class Decodanda:
 
     def _one_cv_step(self, dic, training_fraction, ndata, shuffled=False, destroy_correlations=False,
                      testing_trials=None):
+        """
+        :param dic: the dichotomy to be decoded, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']]
+        :param training_fraction: the fraction of trials used for training.
+        :param ndata: the number of population vectors sampled for training and for testing per each condition.
+        :param shuffled: if True, population vectors for each condition are sampled in a shuffled way compatible with a null model.
+        :param destroy_correlations: if True, correlations within populatin vectors in the sampled training and testing data are destroyed by horizontal shuffling.
+        :param testing_trials: if specified, these trials will be used for testing, and the remaining ones for training.
+        :return: performance: decoding performance.
+        """
 
         dic_key = self._dic_key(dic)
         set_A = dic[0]
@@ -257,9 +259,21 @@ class Decodanda:
 
     # Dichotomy decoding functions
 
-    def decode_dichotomy(self, dic, training_fraction, cross_validations=10, ndata='auto', shuffled=False,
+    def decode_dichotomy(self, dic: list, training_fraction: float, cross_validations=10, ndata='auto', shuffled=False,
                          parallel=False, destroy_correlations=False, testing_trials=None):
+        """
+        Function that performs cross-validated decoding of a specific dichotomy.
 
+        :param dic: the dichotomy to be decoded, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']]
+        :param training_fraction: the fraction of trials used for training in each cross-validation fold.
+        :param cross_validations: the number of cross-validations
+        :param ndata: the number of population vectors sampled for training and for testing per each condition.
+        :param shuffled: if True, population vectors for each condition are sampled in a shuffled way compatible with a null model.
+        :param parallel: if True, each cross-validation is performed by a dedicated thread (experimental).
+        :param destroy_correlations: if True, correlations within populatin vectors in the sampled training and testing data are destroyed by horizontal shuffling.
+        :param testing_trials: if specified, these trials will be used for testing, and the remaining ones for training.
+        :return: performances: list of decoding performance values for each cross-validation.
+        """
         # TODO: make these comments into proper doc
         # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
         # Example: dic = [['10', '11'], ['00', '01']]
@@ -396,7 +410,19 @@ class Decodanda:
     def decode_with_nullmodel(self, dic, training_fraction, cross_validations=10, nshuffles=25, ndata='auto',
                               parallel=False, return_CV=False, destroy_correlations=False, testing_trials=None,
                               plot=False):
-        # TODO: write doc
+        """
+        :param dic: the dichotomy to be decoded, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']]
+        :param training_fraction: the fraction of trials used for training in each cross-validation fold.
+        :param cross_validations: the number of cross-validations
+        :param nshuffles: the number of null-model iterations. Each iteration reproduces all cross_validations folds in a shuffled way compatible with a null model.
+        :param ndata: the number of population vectors sampled for training and for testing per each condition.
+        :param parallel: if True, each cross-validation is performed by a dedicated thread (experimental).
+        :param return_CV: if True, all cross-validation values are returned.
+        :param destroy_correlations: if True, correlations within populatin vectors in the sampled training and testing data are destroyed by horizontal shuffling.
+        :param testing_trials: if specified, these trials will be used for testing, and the remaining ones for training.
+        :param plot: if True, the results will be visualized.
+        :return: performance, null_model_performances.
+        """
 
         d_performances = self.decode_dichotomy(dic, training_fraction, cross_validations, ndata, parallel=parallel,
                                                destroy_correlations=destroy_correlations, testing_trials=testing_trials)
@@ -534,6 +560,119 @@ class Decodanda:
             plot_perfs_null_model(ccgp, ccgp_nullmodel, ylabel='CCGP', ax=ax, **kwargs)
 
         return ccgp, ccgp_nullmodel
+
+    # Geometrical analysis functions
+    # compare decoding perf of dychotomies -> color each point wrt max overlap with semantic -> XOR vs. semantic
+    # add CCGP for semantic in the other viz
+    # z-score results vs. absolute performance? Or use dashed lines for non-
+
+    def geometrical_analysis(self, training_fraction=0.75, cross_validations=10, nshuffles=10, ndata='auto',
+                             visualize=True, z_score_res=False):
+        all_dics = generate_dichotomies(self.n_conditions)[1]
+        semantic_overlap = []
+        dic_name = []
+
+        for i, dic in enumerate(all_dics):
+            semantic_overlap.append(semantic_score(dic))
+            dic_name.append(str(self._dic_key(dic)))
+        semantic_overlap = np.asarray(semantic_overlap)
+
+        # sorting dichotomies wrt semantic overlap
+        dic_name = np.asarray(dic_name)[np.argsort(semantic_overlap)[::-1]]
+        all_dics = list(np.asarray(all_dics)[np.argsort(semantic_overlap)[::-1]])
+        semantic_overlap = semantic_overlap[np.argsort(semantic_overlap)[::-1]]
+        semantic_overlap = (semantic_overlap - np.min(semantic_overlap)) / (
+                    np.max(semantic_overlap) - np.min(semantic_overlap))
+
+        # decoding all dichotomies
+        decoding_results = []
+        decoding_null = []
+        for i, dic in enumerate(all_dics):
+            res, null = self.decode_with_nullmodel(dic,
+                                                   training_fraction=training_fraction,
+                                                   cross_validations=cross_validations,
+                                                   nshuffles=nshuffles,
+                                                   ndata=ndata)
+            print(i, res)
+            decoding_results.append(res)
+            decoding_null.append(null)
+
+        # CCGP all dichotomies
+        CCGP_results = []
+        CCGP_null = []
+        for i, dic in enumerate(all_dics):
+            res, null = self.CCGP_with_nullmodel(dic,
+                                                 ntrials=cross_validations,
+                                                 nshuffles=nshuffles,
+                                                 ndata=ndata,
+                                                 only_semantic=False)
+            print(i, res)
+            CCGP_results.append(res)
+            CCGP_null.append(null)
+
+        # plotting
+        if visualize:
+            if self.n_conditions > 2:
+                f, axs = plt.subplots(2, 1, figsize=(6, 6))
+                axs[0].set_xlabel('Dichotomy (ordered by semantic score)')
+                axs[1].set_xlabel('Dichotomy (ordered by semantic score)')
+            else:
+                f, axs = plt.subplots(1, 2, figsize=(6, 3.5))
+                axs[0].set_xlabel('Dichotomy')
+                axs[1].set_xlabel('Dichotomy')
+                axs[0].set_xlim([-0.5, 2.5])
+                axs[1].set_xlim([-0.5, 2.5])
+
+            axs[0].set_ylabel('Decoding Performance')
+            axs[1].set_ylabel('CCGP')
+            axs[0].axhline([0.5], color='k', linestyle='--', alpha=0.5)
+            axs[1].axhline([0.5], color='k', linestyle='--', alpha=0.5)
+            axs[0].set_xticks([])
+            axs[1].set_xticks([])
+            sns.despine(f)
+
+            # visualize Decoding
+            for i in range(len(all_dics)):
+                if z_pval(decoding_results[i], decoding_null[i])[1] < 0.01:
+                    axs[0].scatter(i, decoding_results[i], marker='o',
+                                   color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                                   s=110, linewidth=2, linestyle='-')
+                elif z_pval(decoding_results[i], decoding_null[i])[1] < 0.05:
+                    axs[0].scatter(i, decoding_results[i], marker='o',
+                                   color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                                   s=110, linewidth=2, linestyle='--')
+                elif z_pval(decoding_results[i], decoding_null[i])[1] > 0.05:
+                    axs[0].scatter(i, decoding_results[i], marker='o',
+                                   color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                                   s=110, linewidth=2, linestyle='dotted')
+                axs[0].errorbar(i, np.nanmean(decoding_null[i]), np.nanstd(decoding_null[i]), color='k', alpha=0.3)
+
+                if dic_name[i] != '0':
+                    axs[0].text(i, decoding_results[i] + 0.03, dic_name[i], rotation=90, fontsize=6, color='k',
+                                ha='center', fontweight='bold')
+            # visualize CCGP
+
+            for i in range(len(all_dics)):
+                if z_pval(CCGP_results[i], CCGP_null[i])[1] < 0.01:
+                    axs[1].scatter(i, CCGP_results[i], marker='s',
+                                   color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                                   s=110, linewidth=2, linestyle='-')
+                elif z_pval(CCGP_results[i], CCGP_null[i])[1] < 0.05:
+                    axs[1].scatter(i, CCGP_results[i], marker='s',
+                                   color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                                   s=110, linewidth=2, linestyle='dotted')
+                elif z_pval(CCGP_results[i], CCGP_null[i])[1] > 0.05:
+                    axs[1].scatter(i, CCGP_results[i], marker='s',
+                                   color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                                   s=110, linewidth=2, linestyle='--')
+
+                axs[1].errorbar(i, np.nanmean(CCGP_null[i]), np.nanstd(CCGP_null[i]), color='k', alpha=0.3)
+
+                if dic_name[i] != '0':
+                    axs[1].text(i, CCGP_results[i] + 0.035, dic_name[i], rotation=90, fontsize=6, color='k',
+                              ha='center', fontweight='bold')
+
+        return [all_dics, semantic_overlap], [decoding_results, decoding_null], [CCGP_results, CCGP_null]
 
     # init utilities
 
@@ -675,8 +814,8 @@ class Decodanda:
             col_sum = np.sum(d, 0)
             if len(dic[0]) in col_sum:
                 return self.semantic_keys[np.where(col_sum == len(dic[0]))[0][0]]
-        if dic == [['11', '00'], ['01', '10']] or dic == [['01', '10'], ['00', '11']]:
-            return 'XOR'
+            elif self.n_conditions == 2:
+                return 'XOR'
         return 0
 
     def _generate_semantic_vectors(self):
