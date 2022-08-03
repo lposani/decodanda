@@ -629,6 +629,8 @@ class Decodanda:
             axs[1].axhline([0.5], color='k', linestyle='--', alpha=0.5)
             axs[0].set_xticks([])
             axs[1].set_xticks([])
+            axs[0].set_ylim([0, 1.05])
+            axs[1].set_ylim([0, 1.05])
             sns.despine(f)
 
             # visualize Decoding
@@ -660,11 +662,11 @@ class Decodanda:
                 elif z_pval(CCGP_results[i], CCGP_null[i])[1] < 0.05:
                     axs[1].scatter(i, CCGP_results[i], marker='s',
                                    color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
-                                   s=110, linewidth=2, linestyle='dotted')
+                                   s=110, linewidth=2, linestyle='--')
                 elif z_pval(CCGP_results[i], CCGP_null[i])[1] > 0.05:
                     axs[1].scatter(i, CCGP_results[i], marker='s',
                                    color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
-                                   s=110, linewidth=2, linestyle='--')
+                                   s=110, linewidth=2, linestyle='dotted')
 
                 axs[1].errorbar(i, np.nanmean(CCGP_null[i]), np.nanstd(CCGP_null[i]), color='k', alpha=0.3)
 

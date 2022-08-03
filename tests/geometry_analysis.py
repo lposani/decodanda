@@ -12,13 +12,6 @@ from decodanda import *
 
 np.random.seed(0)
 
-s1 = FakeSession(n_neurons=120,
-                 ndata=2000,
-                 noise_amplitude=0.02,
-                 coding_fraction=0.3,
-                 rotate=False,
-                 symplex=False)
-
 conditions = {
     'number': {
         '1': lambda s: s.behaviour_number < 1.5,
@@ -36,12 +29,34 @@ conditions = {
     }
 }
 
+# Disentangled representations
+s1 = FakeSession(n_neurons=120,
+                 ndata=2000,
+                 noise_amplitude=0.02,
+                 coding_fraction=0.3,
+                 rotate=False,
+                 symplex=False)
+
 mydec = Decodanda(data=s1,
                   conditions=conditions,
                   verbose=False)
 
-mydec.geometrical_analysis(training_fraction=0.8, nshuffles=2, visualize=True)
-mydec.geometrical_analysis(training_fraction=0.8, nshuffles=2, visualize=False)
+mydec.geometrical_analysis(training_fraction=0.8, nshuffles=20, visualize=True)
+plt.suptitle('Disentangled representations')
+plt.savefig('./geometry_analysis_disentangled.pdf')
 
-plt.show()
-plt.savefig('./Semantic_score.pdf')
+# Entangled representations
+s1 = FakeSession(n_neurons=120,
+                 ndata=2000,
+                 noise_amplitude=0.02,
+                 coding_fraction=0.3,
+                 rotate=True,
+                 symplex=True)
+
+mydec = Decodanda(data=s1,
+                  conditions=conditions,
+                  verbose=False)
+
+mydec.geometrical_analysis(training_fraction=0.8, nshuffles=20, visualize=True)
+plt.suptitle('Entangled representations')
+plt.savefig('./geometry_analysis_entangled.pdf')
