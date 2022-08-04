@@ -561,11 +561,6 @@ class Decodanda:
 
         return ccgp, ccgp_nullmodel
 
-    # Geometrical analysis functions
-    # compare decoding perf of dychotomies -> color each point wrt max overlap with semantic -> XOR vs. semantic
-    # add CCGP for semantic in the other viz
-    # z-score results vs. absolute performance? Or use dashed lines for non-
-
     def geometrical_analysis(self, training_fraction=0.75, cross_validations=10, nshuffles=10, ndata='auto',
                              visualize=True, z_score_res=False):
         all_dics = generate_dichotomies(self.n_conditions)[1]
@@ -650,7 +645,7 @@ class Decodanda:
                 axs[0].errorbar(i, np.nanmean(decoding_null[i]), np.nanstd(decoding_null[i]), color='k', alpha=0.3)
 
                 if dic_name[i] != '0':
-                    axs[0].text(i, decoding_results[i] + 0.03, dic_name[i], rotation=90, fontsize=6, color='k',
+                    axs[0].text(i, decoding_results[i] + 0.08, dic_name[i], rotation=90, fontsize=6, color='k',
                                 ha='center', fontweight='bold')
             # visualize CCGP
 
@@ -671,7 +666,7 @@ class Decodanda:
                 axs[1].errorbar(i, np.nanmean(CCGP_null[i]), np.nanstd(CCGP_null[i]), color='k', alpha=0.3)
 
                 if dic_name[i] != '0':
-                    axs[1].text(i, CCGP_results[i] + 0.035, dic_name[i], rotation=90, fontsize=6, color='k',
+                    axs[1].text(i, CCGP_results[i] + 0.08, dic_name[i], rotation=90, fontsize=6, color='k',
                               ha='center', fontweight='bold')
 
         return [all_dics, semantic_overlap], [decoding_results, decoding_null], [CCGP_results, CCGP_null]
