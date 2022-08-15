@@ -21,9 +21,9 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
     if time_boundaries is None:
         # find minimum and maximum such that we have the same number of data for each time point
         ntrials = np.sum(data[time_attr] == 0)
-        while (np.sum(data[time_attr] == all_times[min_time_index - 1])) == ntrials:
+        while ((np.sum(data[time_attr] == all_times[min_time_index - 1])) == ntrials) and (min_time_index > 0):
             min_time_index -= 1
-        while (np.sum(data[time_attr] == all_times[max_time_index])) == ntrials:
+        while ((np.sum(data[time_attr] == all_times[max_time_index])) == ntrials) and (max_time_index <= len(all_times)):
             max_time_index += 1
         print("times min: %.2f, max: %.2f - %u trials" % (all_times[min_time_index], all_times[max_time_index], ntrials))
         all_times = all_times[min_time_index:max_time_index]
@@ -51,6 +51,7 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
     return performances, nulls
 
 
+# Function to decode one specific time bin
 def decoding_in_time(data, conditions, time_attr, time, decodanda_params, decoding_params):
     # creating new conditions using the conditions lambda functions plus the specific time filter
     # caution: extreme lambda abstraction involved
