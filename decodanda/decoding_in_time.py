@@ -23,7 +23,7 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
         ntrials = np.sum(data[time_attr] == 0)
         while ((np.sum(data[time_attr] == all_times[min_time_index - 1])) == ntrials) and (min_time_index > 0):
             min_time_index -= 1
-        while ((np.sum(data[time_attr] == all_times[max_time_index])) == ntrials) and (max_time_index < len(all_times)):
+        while ((np.sum(data[time_attr] == all_times[max_time_index])) == ntrials) and (max_time_index < len(all_times)-1):
             max_time_index += 1
         print("times min: %.2f, max: %.2f - %u trials" % (all_times[min_time_index], all_times[max_time_index], ntrials))
         all_times = all_times[min_time_index:max_time_index]
@@ -34,7 +34,6 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
         all_times = all_times[all_times <= time_boundaries[1]]
         for i, t in enumerate(data[time_attr]):
             if t == all_times[0]:
-                print(data[time_attr][i:i+len(all_times)])
                 if (data[time_attr][i:i+len(all_times)] == all_times).all():
                     data['time_selected'][i:i+len(all_times)] = data[time_attr][i:i+len(all_times)]
         time_attr = 'time_selected'
