@@ -9,7 +9,7 @@ __pycache__/
 *.so
 
 # Test results
-.tests/*.pdf
+./tests/*.pdf
 
 # Egg file for development
 decodanda.egg-info

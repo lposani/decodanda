@@ -23,7 +23,7 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
         ntrials = np.sum(data[time_attr] == 0)
         while ((np.sum(data[time_attr] == all_times[min_time_index - 1])) == ntrials) and (min_time_index > 0):
             min_time_index -= 1
-        while ((np.sum(data[time_attr] == all_times[max_time_index])) == ntrials) and (max_time_index <= len(all_times)):
+        while ((np.sum(data[time_attr] == all_times[max_time_index])) == ntrials) and (max_time_index < len(all_times)):
             max_time_index += 1
         print("times min: %.2f, max: %.2f - %u trials" % (all_times[min_time_index], all_times[max_time_index], ntrials))
         all_times = all_times[min_time_index:max_time_index]
