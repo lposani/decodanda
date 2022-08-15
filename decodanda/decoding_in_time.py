@@ -1,5 +1,5 @@
-from decodanda import Decodanda
-from imports import *
+from .decodanda import Decodanda
+from .imports import *
 
 
 def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params, time_boundaries=None):
