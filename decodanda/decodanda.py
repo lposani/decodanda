@@ -1045,3 +1045,7 @@ def generate_binary_conditions(discrete_dict):
             '%s' % discrete_dict[key][1]: lambda d, k=key: getattr(d, k) == discrete_dict[k][1],
         }
     return conditions
+
+
+# Interfaces
+
