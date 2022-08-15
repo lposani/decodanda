@@ -25,7 +25,7 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
             min_time_index -= 1
         while (np.sum(data[time_attr] == all_times[max_time_index])) == ntrials:
             max_time_index += 1
-        print("Found min: %u, max: %u" % (all_times[min_time_index], all_times[max_time_index]))
+        print("times min: %.2f, max: %.2f - %u trials" % (all_times[min_time_index], all_times[max_time_index], ntrials))
         all_times = all_times[min_time_index:max_time_index]
     else:
         # select only trials that have data up to the time boundaries
@@ -38,8 +38,9 @@ def time_analysis(data, conditions, time_attr, decodanda_params, decoding_params
                 if (data[time_attr][i:i+len(all_times)] == all_times).all():
                     data['time_selected'][i:i+len(all_times)] = data[time_attr][i:i+len(all_times)]
         time_attr = 'time_selected'
+        print("times min: %.2f, max: %.2f - %u trials" % (all_times[0], all_times[-1], np.sum(data['time_selected']==0)))
 
-    # assuming time_attr has T unique values that are common for all trials / events
+    # now assuming time_attr has T unique values that are common for all trials / events
     performances = {key: np.zeros(len(all_times)) for key in conditions}
     nulls = {key: np.zeros((len(all_times), decoding_params['nshuffles'])) for key in conditions}
     for i, t in enumerate(all_times):
