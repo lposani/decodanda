@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.2.14'
+VERSION = '0.2.15'
 DESCRIPTION = 'Best practices made easy for decoding in neuroscience.'
 LONG_DESCRIPTION = 'Decodanda is a best-practices-made-easy Python package that handles the most common issues in decoding from population activity in neuroscience.'
 # Setting up

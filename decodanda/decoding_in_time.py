@@ -56,7 +56,7 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
         for i, key in enumerate(list(performances.keys())):
             ax[i].set_xlabel('Time from offset')
             ax[i].set_xticks(time_centers)
-            ax[i].set_xticklables(xlabels)
+            ax[i].set_xticklabels(xlabels)
             ax[0].set_ylabel('Decoding performance')
             ax[i].plot(time_centers, performances[key], linewidth=2, color=pltcolors[i], marker='o')
             line_with_shade(time_centers, nulls[key].T, ax=ax[i], errfunc=lambda x, axis: 2*np.nanstd(x, axis=axis))
