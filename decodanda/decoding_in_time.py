@@ -37,7 +37,7 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
     nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in list(conditions.keys())+['XOR']}
     pvalues = {key: np.zeros(len(time_centers))*np.nan for key in list(conditions.keys())+['XOR']}
 
-    for i, t in enumerate(time_centers):
+    for i, t in tqdm(enumerate(time_centers)):
         print("\n[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t+time_window))
         perfs, null = decoding_in_time(data, conditions, 'time_selected', t, time_window, decodanda_params,
                                        decoding_params)
