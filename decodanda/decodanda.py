@@ -954,8 +954,13 @@ class Decodanda:
             self.conditioned_trial_index[w] = self.ordered_conditioned_trial_index[w].copy()
 
     def _check_trial_availability(self):
+        if self.debug:
+            print('\nCheck trial availability')
         for k in self.conditioned_trial_index:
-            for ti in self.conditioned_trial_index[k]:
+            for i, ti in enumerate(self.conditioned_trial_index[k]):
+                if self.debug:
+                    print(k, 'raster %u:' % i, np.sum(np.unique(ti)))
+                    print(ti)
                 if np.sum(np.unique(ti)) < 2:
                     return False
         return True

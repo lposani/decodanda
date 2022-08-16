@@ -348,8 +348,8 @@ def training_test_block_masks(T, training_fraction, trials, randomstate=None, de
                 testing_trials = unique_trial_numbers[
                     randomstate.choice(nutn, size=ceil(nutn * (1. - training_fraction)), replace=False)]
         if debug:
-            print("Testing trials:")
-            print(testing_trials)
+            print("All trials:", unique_trial_numbers)
+            print("Testing trials:", testing_trials)
     testing_mask = np.in1d(trials, testing_trials)
     training_mask = testing_mask == 0
     return training_mask, testing_mask
