@@ -3,12 +3,12 @@ from .visualize import line_with_shade
 from .imports import *
 
 
-def time_analysis(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries, plot=False):
+def time_analysis(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
+                  plot=False):
     """
     :param data: the dataset to be decoded, in the same for as in the Decodanda constructor.
     :param conditions: the variables with values to be decoded, in the same for as in the Decodanda constructor.
     :param time_attr: the variable that defines time from the zero offset.
-    :param time_window: the width of the time window used per each decoding analysis. Windows are non overlapping.
     :param decodanda_params: dictionary of parameters for the Decodanda constructor.
     :param decoding_params: dictionary of parameters for the Decodanda.decode() function.
     :param time_boundaries: List [min, max]: only trials with data points spanning the whole time
@@ -23,33 +23,37 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
         all_times = all_times[all_times <= time_boundaries[1]]
         for i, t in enumerate(dataset[time_attr]):
             if t == all_times[0]:
-                if (dataset[time_attr][i:i+len(all_times)] == all_times).all():
-                    dataset['time_selected'][i:i+len(all_times)] = dataset[time_attr][i:i+len(all_times)]
-        print("times min: %.2f, max: %.2f - %u trials out of %u" % (all_times[0], all_times[-1], np.sum(dataset['time_selected']==0), np.sum(dataset[time_attr]==0)))
+                if (dataset[time_attr][i:i + len(all_times)] == all_times).all():
+                    dataset['time_selected'][i:i + len(all_times)] = dataset[time_attr][i:i + len(all_times)]
+        print("times min: %.2f, max: %.2f - %u trials out of %u" % (
+            all_times[0], all_times[-1], np.sum(dataset['time_selected'] == 0), np.sum(dataset[time_attr] == 0)))
 
     # now assuming time_attr has T unique values that are common for all trials / events
 
-    time_centers = np.linspace(all_times[0], all_times[-1], 1+floor((all_times[-1]-all_times[0])/time_window))[:-1]
+    time_centers = np.linspace(all_times[0], all_times[-1], 1 + floor((all_times[-1] - all_times[0]) / time_window))[
+                   :-1]
     print(time_centers)
     performances = {key: np.zeros(len(time_centers)) for key in conditions}
     nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in conditions}
     for i, t in enumerate(time_centers):
-        perfs, null = decoding_in_time(data, conditions, 'time_selected', t, time_window, decodanda_params, decoding_params)
+        perfs, null = decoding_in_time(data, conditions, 'time_selected', t, time_window, decodanda_params,
+                                       decoding_params)
         for key in perfs:
             performances[key][i] = perfs[key]
             nulls[key][i] = null[key]
     if plot:
         nkeys = len(performances.keys())
-        f, ax = plt.subplots(1, nkeys, figsize=(4 * nkeys, 3.5))
+        f, ax = plt.subplots(1, nkeys, figsize=(4 * nkeys, 3.5), sharey=True)
         sns.despine(f)
         for i, key in enumerate(list(performances.keys())):
             ax[i].set_xlabel('Time from offset')
-            ax[i].set_ylabel('Decoding performance')
+            ax[0].set_ylabel('Decoding performance')
             ax[i].plot(time_centers, performances[key], linewidth=2, color=pltcolors[i], marker='o')
             line_with_shade(time_centers, nulls[key].T, ax=ax[i])
             ax[i].set_title(key)
+            ax[i].axvline([0], color='k', linestyle='--', alpha=0.5, linewidth=2)
 
-    return performances, nulls
+    return performances, nulls, time_centers
 
 
 # Function to decode one specific time bin
@@ -57,12 +61,14 @@ def decoding_in_time(data, conditions, time_attr, time, dt, decodanda_params, de
     # creating new conditions using the conditions lambda functions plus the specific time filter
     # caution: extreme lambda abstraction involved
     if type(list(conditions.values())[0]) == list:
-        conditions = generate_binary_conditions(conditions)
+        conditions = decodanda.generate_binary_conditions(conditions)
     t_conditions = {}
 
     for key in conditions:
         t_conditions[key] = {}
         for sub_key in conditions[key]:
-            t_conditions[key][sub_key] = lambda d, t0=time, mk=key, k=sub_key: conditions[mk][k](d) & (d[time_attr] >= t0) & (d[time_attr] < t0+dt)  # pass these  ^      ^       ^   as default args to allow iteration
+            t_conditions[key][sub_key] = lambda d, t0=time, mk=key, k=sub_key: conditions[mk][k](d) & (
+                    d[time_attr] >= t0) & (d[
+                                               time_attr] < t0 + dt)  # pass these  ^      ^       ^   as default args to allow iteration
     perfs, null = Decodanda(data=data, conditions=t_conditions, **decodanda_params).decode(XOR=True, **decoding_params)
     return perfs, null
