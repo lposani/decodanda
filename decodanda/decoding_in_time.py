@@ -1,7 +1,7 @@
 from .decodanda import Decodanda, generate_binary_conditions
 from .visualize import line_with_shade
 from .imports import *
-from .utilities import p_to_ast, z_pval
+from .utilities import p_to_ast, z_pval, p_to_text
 
 
 def time_analysis(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
@@ -33,9 +33,9 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
 
     time_centers = np.linspace(all_times[0], all_times[-1], 1 + floor((all_times[-1] - all_times[0]) / time_window))[
                    :-1]
-    performances = {key: np.zeros(len(time_centers)) for key in conditions}
-    nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in conditions}
-    pvalues = {key: np.zeros(len(time_centers))*np.nan for key in conditions}
+    performances = {key: np.zeros(len(time_centers)) for key in list(conditions.keys())+['XOR']}
+    nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in list(conditions.keys())+['XOR']}
+    pvalues = {key: np.zeros(len(time_centers))*np.nan for key in list(conditions.keys())+['XOR']}
 
     for i, t in enumerate(time_centers):
         print("[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t+time_window))
