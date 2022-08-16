@@ -61,7 +61,7 @@ def decoding_in_time(data, conditions, time_attr, time, dt, decodanda_params, de
     # creating new conditions using the conditions lambda functions plus the specific time filter
     # caution: extreme lambda abstraction involved
     if type(list(conditions.values())[0]) == list:
-        conditions = decodanda.generate_binary_conditions(conditions)
+        conditions = generate_binary_conditions(conditions)
     t_conditions = {}
 
     for key in conditions:
