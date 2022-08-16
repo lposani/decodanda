@@ -58,6 +58,8 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
         xlabels = ['%s\n%s' % (t, t + time_window) for t in time_centers]
         f, ax = plt.subplots(1, nkeys, figsize=(4 * nkeys, 3.5), sharey=True)
         sns.despine(f)
+        if len(conditions) == 1:
+            ax = [ax]
         for i, key in enumerate(list(performances.keys())):
             ax[i].set_xlabel('Time from offset')
             ax[i].set_xticks(time_centers)
