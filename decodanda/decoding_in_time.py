@@ -1,6 +1,7 @@
 from .decodanda import Decodanda, generate_binary_conditions
 from .visualize import line_with_shade
 from .imports import *
+from .utilities import p_to_ast, z_pval
 
 
 def time_analysis(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
@@ -32,15 +33,21 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
 
     time_centers = np.linspace(all_times[0], all_times[-1], 1 + floor((all_times[-1] - all_times[0]) / time_window))[
                    :-1]
-    print(time_centers)
     performances = {key: np.zeros(len(time_centers)) for key in conditions}
     nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in conditions}
+    pvalues = {key: np.zeros(len(time_centers))*np.nan for key in conditions}
+
     for i, t in enumerate(time_centers):
+        print("[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t+time_window))
         perfs, null = decoding_in_time(data, conditions, 'time_selected', t, time_window, decodanda_params,
                                        decoding_params)
         for key in perfs:
             performances[key][i] = perfs[key]
             nulls[key][i] = null[key]
+            print(key, 'Performance:', np.nanmean(perfs[key]), 'Null: %.2f +- %.2f std' %
+                  (np.nanmean(null[key]), np.nanstd(null[key])), p_to_text(z_pval(perfs[key], null[key])[1]))
+            pvalues[key][i] = z_pval(perfs[key], null[key])[1]
+
     if plot:
         nkeys = len(performances.keys())
         f, ax = plt.subplots(1, nkeys, figsize=(4 * nkeys, 3.5), sharey=True)
@@ -49,9 +56,12 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
             ax[i].set_xlabel('Time from offset')
             ax[0].set_ylabel('Decoding performance')
             ax[i].plot(time_centers, performances[key], linewidth=2, color=pltcolors[i], marker='o')
-            line_with_shade(time_centers, nulls[key].T, ax=ax[i])
+            line_with_shade(time_centers, nulls[key].T, ax=ax[i], errfunc=lambda x, axis: 2*np.nanstd(x, axis=axis))
             ax[i].set_title(key)
             ax[i].axvline([0], color='k', linestyle='--', alpha=0.5, linewidth=2)
+            for t in range(len(time_centers)):
+                if pvalues[key][t] < 0.05:
+                    ax[i].text(time_centers[t], performances[key][t], p_to_ast(pvalues[key][t]), ha='center', va='bottom', fontsize=11)
 
     return performances, nulls, time_centers
 
@@ -72,3 +82,4 @@ def decoding_in_time(data, conditions, time_attr, time, dt, decodanda_params, de
                                                time_attr] < t0 + dt)  # pass these  ^      ^       ^   as default args to allow iteration
     perfs, null = Decodanda(data=data, conditions=t_conditions, **decodanda_params).decode(XOR=True, **decoding_params)
     return perfs, null
+
