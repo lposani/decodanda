@@ -959,9 +959,9 @@ class Decodanda:
         for k in self.conditioned_trial_index:
             for i, ti in enumerate(self.conditioned_trial_index[k]):
                 if self.debug:
-                    print(k, 'raster %u:' % i, np.sum(np.unique(ti)))
+                    print(k, 'raster %u:' % i, np.unique(ti).shape[0])
                     print(ti)
-                if np.sum(np.unique(ti)) < 2:
+                if np.unique(ti).shape[0] < 2:
                     return False
         return True
 
