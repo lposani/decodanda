@@ -924,6 +924,11 @@ class Decodanda:
             for di in dics:
                 self._shuffle_conditioned_arrays(di)
 
+        if not self._check_trial_availability():    # if the trial distribution is not cross validatable, redo the shuffling
+            print("Note: re-shuffling arrays")
+            self._order_conditioned_rasters()
+            self._shuffle_conditioned_arrays(dic)
+
     def _rototraslate_conditioned_rasters(self):
         # TODO: understand and remove comments
 
@@ -947,6 +952,13 @@ class Decodanda:
         for w in self.conditioned_rasters.keys():
             self.conditioned_rasters[w] = self.ordered_conditioned_rasters[w].copy()
             self.conditioned_trial_index[w] = self.ordered_conditioned_trial_index[w].copy()
+
+    def _check_trial_availability(self):
+        for k in self.conditioned_trial_index:
+            for ti in self.conditioned_trial_index[k]:
+                if np.sum(np.unique(ti)) < 2:
+                    return False
+        return True
 
 
 # Utilities
