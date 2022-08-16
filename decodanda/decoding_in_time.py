@@ -38,14 +38,14 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
     pvalues = {key: np.zeros(len(time_centers))*np.nan for key in list(conditions.keys())+['XOR']}
 
     for i, t in enumerate(time_centers):
-        print("[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t+time_window))
+        print("\n[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t+time_window))
         perfs, null = decoding_in_time(data, conditions, 'time_selected', t, time_window, decodanda_params,
                                        decoding_params)
         for key in perfs:
             performances[key][i] = perfs[key]
             nulls[key][i] = null[key]
             print(key, 'Performance:', np.nanmean(perfs[key]), 'Null: %.2f +- %.2f std' %
-                  (np.nanmean(null[key]), np.nanstd(null[key])), p_to_text(z_pval(perfs[key], null[key])[1]))
+                  (np.nanmean(null[key]), np.nanstd(null[key])), p_to_ast(z_pval(perfs[key], null[key])[1]))
             pvalues[key][i] = z_pval(perfs[key], null[key])[1]
 
     if plot:

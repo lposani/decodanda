@@ -295,15 +295,15 @@ def sample_training_testing_from_rasters(rasters, ndata, training_fraction, tria
                                                                     testing_trials=testing_trials)
             training_r = r[training_mask, :]
             testing_r = r[testing_mask, :]
-            if debug:
-                f, axs = plt.subplots(2, 1, figsize=(7, 6))
-                visualize_raster(r, ax=axs[0])
-                axs[1].plot(training_mask, label='training')
-                axs[1].plot(testing_mask, label='testing')
-                axs[1].plot(trials[i] / np.max(trials[i]), color='k')
-                plt.legend()
-                axs[1].set_xlabel('time')
-                axs[1].set_title('raster %u' % i)
+            # if debug:
+            #     f, axs = plt.subplots(2, 1, figsize=(7, 6))
+            #     visualize_raster(r, ax=axs[0])
+            #     axs[1].plot(training_mask, label='training')
+            #     axs[1].plot(testing_mask, label='testing')
+            #     axs[1].plot(trials[i] / np.max(trials[i]), color='k')
+            #     plt.legend()
+            #     axs[1].set_xlabel('time')
+            #     axs[1].set_title('raster %u' % i)
 
             if debug:
                 print("\t Raster %u: Using %u data from %u trials for training, %u data from %u trials for testing" % (
@@ -335,8 +335,7 @@ def training_test_block_masks(T, training_fraction, trials, randomstate=None, de
     unique_trial_numbers = np.unique(trials)
     nutn = len(unique_trial_numbers)
     if testing_trials is None:
-        if nutn * (
-                1. - training_fraction) <= 1:  # in the case of very small number of trials, use all but one for training
+        if (nutn * (1. - training_fraction)) <= 1:  # in the case of very small number of trials, use all but one for training
             if randomstate is None:
                 testing_trials = unique_trial_numbers[np.random.choice(nutn, size=1, replace=False)]
             else:
