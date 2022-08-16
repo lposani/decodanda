@@ -1,7 +1,7 @@
 from .decodanda import Decodanda, generate_binary_conditions
 from .visualize import line_with_shade
 from .imports import *
-from .utilities import p_to_ast, z_pval, p_to_text
+from .utilities import p_to_ast, z_pval
 
 
 def time_analysis(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
@@ -44,16 +44,19 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
         for key in perfs:
             performances[key][i] = perfs[key]
             nulls[key][i] = null[key]
-            print(key, 'Performance:', np.nanmean(perfs[key]), 'Null: %.2f +- %.2f std' %
+            print(key, 'Performance: %.2f' % np.nanmean(perfs[key]), 'Null: %.2f +- %.2f std' %
                   (np.nanmean(null[key]), np.nanstd(null[key])), p_to_ast(z_pval(perfs[key], null[key])[1]))
             pvalues[key][i] = z_pval(perfs[key], null[key])[1]
 
     if plot:
         nkeys = len(performances.keys())
+        xlabels = ['%s\n%s' % (t, t + time_window) for t in time_centers]
         f, ax = plt.subplots(1, nkeys, figsize=(4 * nkeys, 3.5), sharey=True)
         sns.despine(f)
         for i, key in enumerate(list(performances.keys())):
             ax[i].set_xlabel('Time from offset')
+            ax[i].set_xticks(time_centers)
+            ax[i].set_xticklables(xlabels)
             ax[0].set_ylabel('Decoding performance')
             ax[i].plot(time_centers, performances[key], linewidth=2, color=pltcolors[i], marker='o')
             line_with_shade(time_centers, nulls[key].T, ax=ax[i], errfunc=lambda x, axis: 2*np.nanstd(x, axis=axis))
