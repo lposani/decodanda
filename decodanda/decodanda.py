@@ -28,7 +28,26 @@ class Decodanda:
                  debug=False,
                  **kwargs
                  ):
+        """
+        Main class that prepares the dataset and exposes the decoding analysis functionalities.
 
+        :param data: dict
+        :param conditions:
+        :param classifier:
+        :param neural_attr:
+        :param trial_attr:
+        :param min_data_per_condition:
+        :param min_trials_per_condition:
+        :param min_activations_per_cell:
+        :param trial_chunk:
+        :param exclude_contiguous_chunks:
+        :param exclude_silent:
+        :param verbose:
+        :param zscore:
+        :param fault_tolerance:
+        :param debug:
+        :param kwargs:
+        """
         # casting single session to a list so that it is compatible with all loops below
         if type(data) != list:
             data = [data]
