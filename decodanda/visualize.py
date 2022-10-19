@@ -404,6 +404,25 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
         axTT.scatter(sel_training[dec.which_brain == n + 1], sel_testing[dec.which_brain == n + 1].T, color=pltcolors[n], alpha=0.4)
 
     
-    
+def visualize_session(session, neural_key='raster', other_keys='all'):
+    if other_keys == 'all':
+        keys = list(session.keys())
+        keys.remove(neural_key)
+    else:
+        keys = other_keys
+
+    n_axs = len(keys)+1
+    height_ratios = [4] + [1 for i in range(len(keys))]
+    f, axs = plt.subplots(n_axs, 1, figsize=(10, 10), gridspec_kw={'height_ratios': height_ratios}, sharex=True)
+    sns.despine(f)
+    visualize_raster(session[neural_key], ax=axs[0])
+    axs[0].set_title(neural_key)
+
+    for i, key in enumerate(keys):
+        print(key, session[key])
+        axs[i+1].plot(session[key], color=pltcolors[i])
+        axs[i+1].set_title(key)
+    axs[-1].set_xlabel('Time')
+
 
 
