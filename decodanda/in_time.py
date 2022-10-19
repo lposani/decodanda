@@ -68,7 +68,7 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
             ax[i].set_xlabel('Time from offset')
             ax[i].set_xticks(time_centers)
             ax[i].set_xticklabels(xlabels)
-            ax[0].set_ylabel('Decoding performance')
+            ax[i].set_ylabel('Decoding performance')
             ax[i].plot(time_centers, performances[key], linewidth=2, color=pltcolors[i], marker='o')
             line_with_shade(time_centers, nulls[key].T, ax=ax[i], errfunc=lambda x, axis: 2 * np.nanstd(x, axis=axis))
             ax[i].set_title(key)
@@ -114,10 +114,10 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
     time_centers = np.linspace(all_times[0], all_times[-1], 1 + floor((all_times[-1] - all_times[0]) / time_window))[
                    :-1]
     if len(conditions) == 2:
-        performances = {key: np.zeros(len(time_centers)) for key in list(conditions.keys()) + ['XOR']}
+        performances = {key: np.zeros(len(time_centers)) for key in list(conditions.keys())}
         nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in
-                 list(conditions.keys()) + ['XOR']}
-        pvalues = {key: np.zeros(len(time_centers)) * np.nan for key in list(conditions.keys()) + ['XOR']}
+                 list(conditions.keys())}
+        pvalues = {key: np.zeros(len(time_centers)) * np.nan for key in list(conditions.keys())}
     else:
         performances = {key: np.zeros(len(time_centers)) for key in conditions}
         nulls = {key: np.zeros((len(time_centers), decoding_params['nshuffles'])) for key in conditions}
@@ -145,7 +145,7 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
             ax[i].set_xlabel('Time from offset')
             ax[i].set_xticks(time_centers)
             ax[i].set_xticklabels(xlabels)
-            ax[0].set_ylabel('Decoding performance')
+            ax[i].set_ylabel('CCGP')
             ax[i].plot(time_centers, performances[key], linewidth=2, color=pltcolors[i], marker='o')
             line_with_shade(time_centers, nulls[key].T, ax=ax[i], errfunc=lambda x, axis: 2 * np.nanstd(x, axis=axis))
             ax[i].set_title(key)
