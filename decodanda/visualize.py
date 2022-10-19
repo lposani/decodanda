@@ -247,6 +247,7 @@ def smooth_hist(data, ax, bins, stairs=False, label=None, color='k'):
 
 # Decoding visualization
 
+
 def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, testing_trials=None):
     f = plt.figure(figsize=(18, 9))
     plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.1)
