@@ -16,6 +16,9 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
     interval will be considered for the decoding analysis.
     :return: performances, null
     """
+    if type(data) != list:
+        data = [data]
+
     for dataset in data:
         all_times = np.sort(np.unique(dataset[time_attr][np.isnan(dataset[time_attr]) == False]))
         # select only trials that have data up to the time boundaries
@@ -56,7 +59,7 @@ def time_analysis(data, conditions, time_attr, time_window, decodanda_params, de
     if plot:
         nkeys = len(performances.keys())
         xlabels = ['%s\n%s' % (t, t + time_window) for t in time_centers]
-        f, ax = plt.subplots(1, nkeys, figsize=(4 * nkeys, 3.5), sharey=True)
+        f, ax = plt.subplots(nkeys, 1, figsize=(7, 3.5 * nkeys))
         sns.despine(f)
         if len(conditions) == 1:
             ax = [ax]
