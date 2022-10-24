@@ -59,7 +59,7 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
 
     if plot:
         nkeys = len(performances.keys())
-        xlabels = ['%s\n%s' % (t, t + time_window) for t in time_centers]
+        xlabels = ['%.2f\n%.2f' % (t, t + time_window) for t in time_centers]
         f, ax = plt.subplots(nkeys, 1, figsize=(7, 3.5 * nkeys))
         sns.despine(f)
         if len(conditions) == 1:
@@ -136,7 +136,7 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
 
     if plot:
         nkeys = len(performances.keys())
-        xlabels = ['%s\n%s' % (t, t + time_window) for t in time_centers]
+        xlabels = ['%.2f\n%.2f' % (t, t + time_window) for t in time_centers]
         f, ax = plt.subplots(nkeys, 1, figsize=(7, 3.5 * nkeys))
         sns.despine(f)
         if len(conditions) == 1:
