@@ -342,7 +342,7 @@ class Decodanda:
             self._order_conditioned_rasters()
         return performances
 
-    def CCGP_dichotomy(self, dic, ntrials=3, ndata='auto', only_semantic=True, shuffled=False,
+    def CCGP_dichotomy_old(self, dic, ntrials=3, ndata='auto', only_semantic=True, shuffled=False,
                        destroy_correlations=False):
 
         # TODO: make these comments into proper doc
@@ -426,6 +426,82 @@ class Decodanda:
             self._order_conditioned_rasters()
         return all_performances
 
+    def CCGP_dichotomy(self, dic, ntrials=3, ndata='auto', only_semantic=True, shuffled=False):
+        # TODO: make these comments into proper doc
+        # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
+        # Example: dic = [['10', '11'], ['00', '01']]
+        #
+        # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
+        # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
+
+        if ndata == 'auto' and self.n_brains == 1:
+            ndata = self.max_conditioned_data
+        if ndata == 'auto' and self.n_brains > 1:
+            ndata = max(self.max_conditioned_data, 2 * self.n_neurons)
+
+        all_performances = []
+
+        if not shuffled:
+            log_dichotomy(self, dic, ndata, 'Cross-condition decoding')
+            iterable = tqdm(range(ntrials))
+        else:
+            iterable = range(1)
+
+        for n in iterable:
+            performances = []
+
+            set_A = dic[0]
+            set_B = dic[1]
+
+            for i in range(len(set_A)):
+                for j in range(len(set_B)):
+                    test_condition_A = set_A[i]
+                    test_condition_B = set_B[j]
+                    # TODO: do we need the only_semantic keyword?
+                    if only_semantic:
+                        go = (hamming(string_bool(test_condition_A), string_bool(test_condition_B)) == 1)
+                    else:
+                        go = True
+                    if go:
+                        training_conditions_A = [x for iA, x in enumerate(set_A) if iA != i]
+                        training_conditions_B = [x for iB, x in enumerate(set_B) if iB != j]
+
+                        training_array_A = []
+                        training_array_B = []
+                        label_A = ''
+                        label_B = ''
+
+                        for ck in training_conditions_A:
+                            arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                            training_array_A.append(arr)
+                            label_A += (self.semantic_vectors[ck] + ' ')
+
+                        for ck in training_conditions_B:
+                            arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                            training_array_B.append(arr)
+                            label_B += (self.semantic_vectors[ck] + ' ')
+
+                        training_array_A = np.vstack(training_array_A)
+                        training_array_B = np.vstack(training_array_B)
+
+                        testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A], ndata=ndata)
+                        testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B], ndata=ndata)
+
+                        if shuffled:
+                            rotation_A = np.arange(testing_array_A.shape[1]).astype(int)
+                            rotation_B = np.arange(testing_array_B.shape[1]).astype(int)
+                            np.random.shuffle(rotation_A)
+                            np.random.shuffle(rotation_B)
+                            testing_array_A = testing_array_A[:, rotation_A]
+                            testing_array_B = testing_array_B[:, rotation_A]
+
+                        self._train(training_array_A, training_array_B, label_A, label_B)
+                        performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
+                        performances.append(performance)
+
+            all_performances.append(np.nanmean(performances))
+        return all_performances
+
     def decode_with_nullmodel(self, dic, training_fraction, cross_validations=10, nshuffles=25, ndata='auto',
                               parallel=False, return_CV=False, destroy_correlations=False, testing_trials=None,
                               plot=False):
@@ -471,11 +547,9 @@ class Decodanda:
 
         return data_performance, null_model_performances
 
-    def CCGP_with_nullmodel(self, dic, ntrials=5, nshuffles=25, ndata='auto', only_semantic=True, return_CV=False,
-                            destroy_correlations=False):
+    def CCGP_with_nullmodel(self, dic, ntrials=5, nshuffles=25, ndata='auto', only_semantic=True, return_CV=False):
         # TODO: write doc
-        performances = self.CCGP_dichotomy(dic, ntrials, ndata, only_semantic=only_semantic,
-                                           destroy_correlations=destroy_correlations)
+        performances = self.CCGP_dichotomy(dic, ntrials, ndata, only_semantic=only_semantic)
 
         if return_CV:
             ccgp = performances
@@ -494,8 +568,7 @@ class Decodanda:
             shuffled_ccgp = np.zeros(nshuffles)
 
         for n in count:
-            performances = self.CCGP_dichotomy(dic, 1, ndata, only_semantic, shuffled=True,
-                                               destroy_correlations=destroy_correlations)
+            performances = self.CCGP_dichotomy(dic, 1, ndata, only_semantic, shuffled=True)
             if return_CV:
                 shuffled_ccgp[n] = performances
             else:
@@ -557,8 +630,7 @@ class Decodanda:
 
         return perfs, perfs_nullmodel
 
-    def CCGP(self, ntrials=5, nshuffles=25, ndata='auto', plot=False, ax=None, only_semantic=True,
-             destroy_correlations=False, **kwargs):
+    def CCGP(self, ntrials=5, nshuffles=25, ndata='auto', plot=False, ax=None, only_semantic=True, **kwargs):
         semantic_dics, semantic_keys = self._find_semantic_dichotomies()
         # TODO: definintely write doc
 
@@ -568,8 +640,7 @@ class Decodanda:
             if self.verbose:
                 print("\nTesting CCGP for semantic dichotomy: ", key)
             data_ccgp, null_ccgps = self.CCGP_with_nullmodel(dic, ntrials, nshuffles, ndata,
-                                                             only_semantic=only_semantic,
-                                                             destroy_correlations=destroy_correlations)
+                                                             only_semantic=only_semantic)
             ccgp[key] = data_ccgp
             ccgp_nullmodel[key] = null_ccgps
 
@@ -949,7 +1020,7 @@ class Decodanda:
             self._shuffle_conditioned_arrays(dic)
 
     def _rototraslate_conditioned_rasters(self):
-        # TODO: understand and remove comments
+        # DEPCRECATED
 
         for i in range(self.n_brains):
             # brain_means = np.vstack([np.nanmean(self.conditioned_rasters[key][i], 0) for key in self.conditioned_rasters.keys()])
