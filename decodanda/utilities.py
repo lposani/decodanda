@@ -25,7 +25,7 @@ class CrossValidator(object):  # necessary for parallelization of cross validati
         performance = self.one_cv_step(self.dic, self.training_fraction, self.ndata)
         return performance
 
-    def train(self, training_raster_A, training_raster_B, label_A, label_B, shuffled=False):
+    def train(self, training_raster_A, training_raster_B, label_A, label_B):
 
         training_labels_A = np.repeat(label_A, training_raster_A.shape[0]).astype(object)
         training_labels_B = np.repeat(label_B, training_raster_B.shape[0]).astype(object)
@@ -34,20 +34,18 @@ class CrossValidator(object):  # necessary for parallelization of cross validati
         training_labels = np.hstack([training_labels_A, training_labels_B])
 
         self.classifier = sklearn.base.clone(self.classifier)
-        if shuffled:
-            np.random.shuffle(training_labels)
+
         training_raster = training_raster[:, self.subset]
         self.classifier.fit(training_raster, training_labels)
 
-    def test(self, testing_raster_A, testing_raster_B, label_A, label_B, shuffled=False):
+    def test(self, testing_raster_A, testing_raster_B, label_A, label_B):
 
         testing_labels_A = np.repeat(label_A, testing_raster_A.shape[0]).astype(object)
         testing_labels_B = np.repeat(label_B, testing_raster_B.shape[0]).astype(object)
 
         testing_raster = np.vstack([testing_raster_A, testing_raster_B])
         testing_labels = np.hstack([testing_labels_A, testing_labels_B])
-        if shuffled:
-            np.random.shuffle(testing_labels)
+
         testing_raster = testing_raster[:, self.subset]
         performance = self.classifier.score(testing_raster, testing_labels)
         return performance
@@ -83,8 +81,7 @@ class CrossValidator(object):  # necessary for parallelization of cross validati
             training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
                                                                      ndata,
                                                                      training_fraction,
-                                                                     self.conditioned_trial_index[d],
-                                                                     randomstate=self.randomstate)
+                                                                     self.conditioned_trial_index[d])
             training_array_B.append(training)
             testing_array_B.append(testing)
 
@@ -93,9 +90,9 @@ class CrossValidator(object):  # necessary for parallelization of cross validati
         testing_array_A = np.vstack(testing_array_A)
         testing_array_B = np.vstack(testing_array_B)
 
-        self.train(training_array_A, training_array_B, label_A, label_B)
+        self._train(training_array_A, training_array_B, label_A, label_B)
 
-        performance = self.test(testing_array_A, testing_array_B, label_A, label_B)
+        performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
 
         return performance
 
@@ -262,6 +259,7 @@ class Logger:
     def log_stats(self, key, data, test, stat_name, stat_val, p):
         logtext = f"{key: <25}{'mean %.3f std %.3f n=%u' % (np.nanmean(data), np.nanstd(data), np.sum(np.isnan(data) == 0)): <30}{'%s %s=%.2f' % (test, stat_name, stat_val) : <35}{p_to_text(p):^10}"
         self.log(logtext)
+
 
 
 # Sampling functions

@@ -1,3 +1,5 @@
+import copy
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -279,7 +281,7 @@ class Decodanda:
     # Dichotomy decoding functions
 
     def decode_dichotomy(self, dic: list, training_fraction: float, cross_validations=10, ndata='auto', shuffled=False,
-                         parallel=False, destroy_correlations=False, testing_trials=None):
+                         parallel=False, destroy_correlations=False, testing_trials=None, **kwargs):
         """
         Function that performs cross-validated decoding of a specific dichotomy.
 
@@ -441,7 +443,7 @@ class Decodanda:
 
         all_performances = []
 
-        if not shuffled:
+        if not shuffled and self.verbose:
             log_dichotomy(self, dic, ndata, 'Cross-condition decoding')
             iterable = tqdm(range(ntrials))
         else:
@@ -1153,3 +1155,55 @@ def generate_binary_conditions(discrete_dict):
             '%s' % discrete_dict[key][1]: lambda d, k=key: getattr(d, k) == discrete_dict[k][1],
         }
     return conditions
+
+
+class NullmodelIterator(object):  # necessary for parallelization of null model iterations
+    def __init__(self, data, conditions, decodanda_params, analysis_params):
+        self.data = data
+        self.conditions = conditions
+        self.decodanda_params = decodanda_params
+        self.analysis_params = analysis_params
+
+    def __call__(self, i):
+        self.i = i
+        self.randomstate = RandomState(i)
+        dec = Decodanda(data=self.data, conditions=self.conditions, **self.decodanda_params)
+        semantic_dics, semantic_keys = dec._find_semantic_dichotomies()
+        if 'XOR' in self.analysis_params.keys():
+            if self.analysis_params['XOR'] and len(self.conditions) == 2:
+                semantic_dics.append([['01', '10'], ['00', '11']])
+                semantic_keys.append('XOR')
+
+        perfs = {}
+        for key, dic in zip(semantic_keys, semantic_dics):
+            if dec.verbose:
+                print("\nTesting null decoding performance for semantic dichotomy: ", key)
+            dec._shuffle_conditioned_arrays(dic)
+            performance = dec.decode_dichotomy(dic, **self.analysis_params)
+            perfs[key] = np.nanmean(performance)
+            dec._order_conditioned_rasters()
+
+        return perfs
+
+
+def decoding_analysis(data, conditions, decodanda_params, analysis_params, parallel=False, plot=False, ax=None):
+    an_params = copy.deepcopy(analysis_params)
+
+    if parallel:
+        # Data
+        null_iterations = an_params['nshuffles']
+        an_params['nshuffles'] = 0
+        performances, _ = Decodanda(data, conditions, **decodanda_params).decode(**an_params)
+
+        # Null
+        del an_params['nshuffles']
+        pool = Pool()
+        null_performances = pool.map(NullmodelIterator(data, conditions, decodanda_params, an_params), range(null_iterations))
+        null = {key: np.stack([p[key] for p in null_performances]) for key in null_performances[0].keys()}
+    else:
+        performances, null = Decodanda(data, conditions, **decodanda_params).decode(**an_params)
+
+    if plot:
+        plot_perfs_null_model(performances, null, ax=ax, ptype='zscore')
+    return performances, null
+
