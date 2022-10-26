@@ -137,7 +137,7 @@ class Decodanda:
             self._compute_centroids()
 
             # null model variables
-            self.random_rotation_matrix = unitary_group.rvs(self.n_neurons)
+            self.random_rotation_matrix = special_ortho_group.rvs(self.n_neurons)
             self.random_translations = {string_bool(w): [] for w in self.condition_vectors}
             self.subset = np.arange(self.n_neurons)
 
