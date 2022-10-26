@@ -1,8 +1,5 @@
 import copy
 
-import matplotlib.pyplot as plt
-import numpy as np
-
 from .imports import *
 from .utilities import *
 from .visualize import *
@@ -27,6 +24,7 @@ class Decodanda:
                  verbose=False,
                  zscore=False,
                  fault_tolerance=False,
+                 random_rotation=False,
                  debug=False,
                  **kwargs
                  ):
@@ -79,6 +77,7 @@ class Decodanda:
         self.min_activations_per_cell = min_activations_per_cell
         self.verbose = verbose
         self.debug = debug
+        self.random_rotation = random_rotation
         self.exclude_silent = exclude_silent
         self.neural_attr = neural_attr
         self.trial_attr = trial_attr
@@ -120,8 +119,9 @@ class Decodanda:
         # conditioned null model index is the chunk division used for null model shuffles
         self.conditioned_trial_index = {string_bool(w): [] for w in self.condition_vectors}
 
-        #   >>> main part: create conditioned arrays <<<
+        #   >>> main part: create conditioned arrays <<< ---------------------------------
         self._divide_data_into_conditions(data)
+        #  \ >>> main part: create conditioned arrays <<< --------------------------------
 
         if zscore:
             self._zscore_activity()
@@ -137,6 +137,7 @@ class Decodanda:
             self._compute_centroids()
 
             # null model variables
+            self.random_rotation_matrix = unitary_group.rvs(self.n_neurons)
             self.random_translations = {string_bool(w): [] for w in self.condition_vectors}
             self.subset = np.arange(self.n_neurons)
 
@@ -148,7 +149,7 @@ class Decodanda:
                 self.ordered_conditioned_trial_index[w] = self.conditioned_trial_index[w].copy()
     # basic decoding functions
 
-    def _train(self, training_raster_A, training_raster_B, label_A, label_B, shuffled=False):
+    def _train(self, training_raster_A, training_raster_B, label_A, label_B):
 
         training_labels_A = np.repeat(label_A, training_raster_A.shape[0]).astype(object)
         training_labels_B = np.repeat(label_B, training_raster_B.shape[0]).astype(object)
@@ -157,9 +158,13 @@ class Decodanda:
         training_labels = np.hstack([training_labels_A, training_labels_B])
 
         self.classifier = sklearn.base.clone(self.classifier)
-        if shuffled:
-            np.random.shuffle(training_labels)
+
         training_raster = training_raster[:, self.subset]
+
+        if self.random_rotation:
+            for i in range(len(training_raster)):
+                training_raster[i, :] = np.dot(training_raster[i, :], self.random_rotation_matrix)
+
         self.classifier.fit(training_raster, training_labels)
 
     def _test(self, testing_raster_A, testing_raster_B, label_A, label_B):
@@ -171,6 +176,11 @@ class Decodanda:
         testing_labels = np.hstack([testing_labels_A, testing_labels_B])
 
         testing_raster = testing_raster[:, self.subset]
+
+        if self.random_rotation:
+            for i in range(len(testing_raster)):
+                testing_raster[i, :] = np.dot(testing_raster[i, :], self.random_rotation_matrix)
+
         if self.debug:
             print("Real labels")
             print(testing_labels)
@@ -318,7 +328,6 @@ class Decodanda:
         else:
             count = range(cross_validations)
 
-        # TODO: fix the parallel call and check cross validator
         if parallel:
             pool = Pool()
             performances = pool.map(CrossValidator(classifier=self.classifier,
