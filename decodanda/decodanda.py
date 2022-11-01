@@ -105,8 +105,12 @@ class Decodanda:
         self._generate_semantic_vectors()
 
         # decoding weights
-        self.decoding_weights = {key: [] for key in self.semantic_keys + ['XOR']}
-        self.decoding_weights_null = {key: [] for key in self.semantic_keys + ['XOR']}
+        if self.n_conditions == 2:
+            self.decoding_weights = {key: [] for key in self.semantic_keys + ['XOR']}
+            self.decoding_weights_null = {key: [] for key in self.semantic_keys + ['XOR']}
+        else:
+            self.decoding_weights = {key: [] for key in self.semantic_keys}
+            self.decoding_weights_null = {key: [] for key in self.semantic_keys}
 
         # creating conditioned array with the following structure:
         #   define a condition_vector with boolean values for each semantic condition, es. 100
