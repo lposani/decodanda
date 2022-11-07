@@ -24,14 +24,11 @@ class Decodanda:
                  verbose=False,
                  zscore=False,
                  fault_tolerance=False,
-                 random_rotation=False,
                  debug=False,
                  **kwargs
                  ):
         """
-        Main class that prepares the dataset and exposes the decoding analysis functionalities.
-
-        :param data: dict
+        :param data:
         :param conditions:
         :param classifier:
         :param neural_attr:
@@ -77,7 +74,6 @@ class Decodanda:
         self.min_activations_per_cell = min_activations_per_cell
         self.verbose = verbose
         self.debug = debug
-        self.random_rotation = random_rotation
         self.exclude_silent = exclude_silent
         self.neural_attr = neural_attr
         self.trial_attr = trial_attr
@@ -141,7 +137,6 @@ class Decodanda:
             self._compute_centroids()
 
             # null model variables
-            self.random_rotation_matrix = special_ortho_group.rvs(self.n_neurons)
             self.random_translations = {string_bool(w): [] for w in self.condition_vectors}
             self.subset = np.arange(self.n_neurons)
 
@@ -165,10 +160,6 @@ class Decodanda:
 
         training_raster = training_raster[:, self.subset]
 
-        if self.random_rotation:
-            for i in range(len(training_raster)):
-                training_raster[i, :] = np.dot(training_raster[i, :], self.random_rotation_matrix)
-
         self.classifier.fit(training_raster, training_labels)
 
     def _test(self, testing_raster_A, testing_raster_B, label_A, label_B):
@@ -180,10 +171,6 @@ class Decodanda:
         testing_labels = np.hstack([testing_labels_A, testing_labels_B])
 
         testing_raster = testing_raster[:, self.subset]
-
-        if self.random_rotation:
-            for i in range(len(testing_raster)):
-                testing_raster[i, :] = np.dot(testing_raster[i, :], self.random_rotation_matrix)
 
         if self.debug:
             print("Real labels")
@@ -516,6 +503,7 @@ class Decodanda:
 
             all_performances.append(np.nanmean(performances))
         return all_performances
+
 
     def decode_with_nullmodel(self, dic, training_fraction, cross_validations=10, nshuffles=25, ndata='auto',
                               parallel=False, return_CV=False, destroy_correlations=False, testing_trials=None,
@@ -920,6 +908,16 @@ class Decodanda:
             elif self.n_conditions == 2:
                 return 'XOR'
         return 0
+
+    def dichotomy_from_key(self, key):
+        dics, keys = self._find_semantic_dichotomies()
+        if key in keys:
+            dic = dics[np.where(np.asarray(keys) == key)[0][0]]
+        else:
+            raise RuntimeError(
+                "\n[dichotomy_from_key] The specified key does not correspond to a semantic dichotomy. Check the key value.")
+
+        return dic
 
     def _generate_semantic_vectors(self):
         for condition_vec in self.condition_vectors:
