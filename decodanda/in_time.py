@@ -92,6 +92,7 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
     :param time_boundaries: List [min, max]: only trials with data points spanning the whole time
     interval will be considered for the decoding analysis.
     :return: performances, null
+
     """
     if type(data) != list:
         data = [data]
