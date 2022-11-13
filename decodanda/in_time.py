@@ -5,7 +5,7 @@ from .utilities import p_to_ast, z_pval
 
 
 def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
-                   plot=False):
+                   plot=False, time_key='Time'):
     """
     :param data: the dataset to be decoded, in the same for as in the Decodanda constructor.
     :param conditions: the variables with values to be decoded, in the same for as in the Decodanda constructor.
@@ -65,7 +65,7 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
         if len(conditions) == 1:
             ax = [ax]
         for i, key in enumerate(list(performances.keys())):
-            ax[i].set_xlabel('Time from offset')
+            ax[i].set_xlabel(time_key)
             ax[i].set_xticks(time_centers)
             ax[i].set_xticklabels(xlabels)
             ax[i].set_ylabel('Decoding performance')
@@ -82,7 +82,7 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
 
 
 def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
-                 plot=False):
+                 plot=False, time_key='Time'):
     """
     :param data: the dataset to be decoded, in the same for as in the Decodanda constructor.
     :param conditions: the variables with values to be decoded, in the same for as in the Decodanda constructor.
@@ -104,7 +104,7 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
         all_times = all_times[all_times <= time_boundaries[1]]
         for i, t in enumerate(dataset[time_attr]):
             if t == all_times[0]:
-                if (dataset[time_attr][i:i + len(all_times)] == all_times).all():
+                if (len(dataset[time_attr][i:i + len(all_times)]) == len(all_times)) and (dataset[time_attr][i:i + len(all_times)] == all_times).all():
                     dataset['time_selected'][i:i + len(all_times)] = dataset[time_attr][i:i + len(all_times)]
         print("times min: %.2f, max: %.2f - %u trials out of %u" % (
             all_times[0], all_times[-1], np.sum(dataset['time_selected'] == 0), np.sum(dataset[time_attr] == 0)))
@@ -142,7 +142,7 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
         if len(conditions) == 1:
             ax = [ax]
         for i, key in enumerate(list(performances.keys())):
-            ax[i].set_xlabel('Time from offset')
+            ax[i].set_xlabel(time_key)
             ax[i].set_xticks(time_centers)
             ax[i].set_xticklabels(xlabels)
             ax[i].set_ylabel('CCGP')
