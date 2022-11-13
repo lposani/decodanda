@@ -85,7 +85,7 @@ def plot_perfs(perfs_in, labels=None, x=0, ax=None, color=None, marker='o', alph
             ax.text(x+0.05, perfs[i], labels[i], fontsize=labelfontsize)
 
 
-def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding performance', ax=None, shownull=False, chance=0.5, setup=True, ptype='count'):
+def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding performance', ax=None, shownull=False, chance=0.5, setup=True, ptype='count', **kwargs):
     labels = list(perfs.keys())
     pvals = {}
     if not ax:
