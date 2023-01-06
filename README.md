@@ -91,8 +91,7 @@ which outputs
 If ```plot=true``` is specified in ```decode()```, the function will show the performance compared
 to the null model (with errorbars spanning 2 STDs) and a significance notation based on the z-score:
 
-![Alt text](./images/decoding_stimulus.png?raw=true "Decoding performance")
-
+<img src="./images/decoding_stimulus.png" width="300"/>
 
 
 <br/>
