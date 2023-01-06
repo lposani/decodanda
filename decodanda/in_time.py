@@ -1,4 +1,4 @@
-from .decodanda import Decodanda, generate_binary_conditions
+from .classes import Decodanda, generate_binary_conditions
 from .visualize import line_with_shade
 from .imports import *
 from .utilities import p_to_ast, z_pval

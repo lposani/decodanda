@@ -1,7 +1,7 @@
 from decodanda.visualize import *
 from decodanda.utilities import *
 from decodanda.imports import *
-from decodanda.decodanda import Decodanda
+from decodanda.classes import Decodanda
 
 
 # Single neurons analysis functions

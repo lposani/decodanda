@@ -1,5 +1,4 @@
 import copy
-
 from .imports import *
 from .utilities import *
 from .visualize import *
@@ -146,6 +145,7 @@ class Decodanda:
             for w in self.conditioned_rasters.keys():
                 self.ordered_conditioned_rasters[w] = self.conditioned_rasters[w].copy()
                 self.ordered_conditioned_trial_index[w] = self.conditioned_trial_index[w].copy()
+
     # basic decoding functions
 
     def _train(self, training_raster_A, training_raster_B, label_A, label_B):
@@ -345,7 +345,7 @@ class Decodanda:
         return performances
 
     def CCGP_dichotomy_old(self, dic, ntrials=3, ndata='auto', only_semantic=True, shuffled=False,
-                       destroy_correlations=False):
+                           destroy_correlations=False):
 
         # TODO: make these comments into proper doc
         # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
@@ -503,7 +503,6 @@ class Decodanda:
 
             all_performances.append(np.nanmean(performances))
         return all_performances
-
 
     def decode_with_nullmodel(self, dic, training_fraction, cross_validations=10, nshuffles=25, ndata='auto',
                               parallel=False, return_CV=False, destroy_correlations=False, testing_trials=None,
@@ -670,7 +669,7 @@ class Decodanda:
         all_dics = list(np.asarray(all_dics)[np.argsort(semantic_overlap)[::-1]])
         semantic_overlap = semantic_overlap[np.argsort(semantic_overlap)[::-1]]
         semantic_overlap = (semantic_overlap - np.min(semantic_overlap)) / (
-                    np.max(semantic_overlap) - np.min(semantic_overlap))
+                np.max(semantic_overlap) - np.min(semantic_overlap))
 
         # decoding all dichotomies
         decoding_results = []
@@ -760,7 +759,7 @@ class Decodanda:
 
                 if dic_name[i] != '0':
                     axs[1].text(i, CCGP_results[i] + 0.08, dic_name[i], rotation=90, fontsize=6, color='k',
-                              ha='center', fontweight='bold')
+                                ha='center', fontweight='bold')
 
         return [all_dics, semantic_overlap], [decoding_results, decoding_null], [CCGP_results, CCGP_null]
 
@@ -768,6 +767,7 @@ class Decodanda:
 
     def _divide_data_into_conditions(self, sessions):
         # TODO: rename sessions into datasets?
+        # TODO: make sure conditions don't overlap somehow
 
         for si, session in enumerate(sessions):
 
@@ -1027,7 +1027,7 @@ class Decodanda:
             for di in dics:
                 self._shuffle_conditioned_arrays(di)
 
-        if not self._check_trial_availability():    # if the trial distribution is not cross validatable, redo the shuffling
+        if not self._check_trial_availability():  # if the trial distribution is not cross validatable, redo the shuffling
             print("Note: re-shuffling arrays")
             self._order_conditioned_rasters()
             self._shuffle_conditioned_arrays(dic)
@@ -1073,7 +1073,7 @@ class Decodanda:
 
 # TODO: for all utilities: write doc or make private
 
-def check_session_requirement(session, conditions, **decodanda_params):
+def check_session_requirements(session, conditions, **decodanda_params):
     d = Decodanda(session, conditions, fault_tolerance=True, **decodanda_params)
     if d.n_brains:
         return True
@@ -1084,8 +1084,8 @@ def check_session_requirement(session, conditions, **decodanda_params):
 def check_requirements_two_conditions(sessions, conditions_1, conditions_2, **decodanda_params):
     good_sessions = []
     for s in sessions:
-        if check_session_requirement(s, conditions_1, **decodanda_params) and check_session_requirement(s, conditions_2,
-                                                                                                        **decodanda_params):
+        if check_session_requirements(s, conditions_1, **decodanda_params) and check_session_requirements(s, conditions_2,
+                                                                                                          **decodanda_params):
             good_sessions.append(s)
     return good_sessions
 
@@ -1209,7 +1209,8 @@ def decoding_analysis(data, conditions, decodanda_params, analysis_params, paral
         # Null
         del an_params['nshuffles']
         pool = Pool()
-        null_performances = pool.map(NullmodelIterator(data, conditions, decodanda_params, an_params), range(null_iterations))
+        null_performances = pool.map(NullmodelIterator(data, conditions, decodanda_params, an_params),
+                                     range(null_iterations))
         null = {key: np.stack([p[key] for p in null_performances]) for key in null_performances[0].keys()}
     else:
         performances, null = Decodanda(data, conditions, **decodanda_params).decode(**an_params)
@@ -1217,4 +1218,3 @@ def decoding_analysis(data, conditions, decodanda_params, analysis_params, paral
     if plot:
         plot_perfs_null_model(performances, null, ax=ax, ptype='zscore')
     return performances, null
-

@@ -1,4 +1,4 @@
-from .decodanda import *
+from .classes import Decodanda, decoding_analysis, balance_decodandas
+from .in_time import decode_in_time, CCGP_in_time
 from .visualize import *
-from .in_time import *
 from .utilities import Logger

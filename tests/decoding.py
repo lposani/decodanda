@@ -32,35 +32,18 @@ conditions = {
 }
 
 # Disentangled representations
-s1 = FakeSession(n_neurons=120,
-                 ndata=2000,
+s1 = FakeSession(n_neurons=70,
+                 ndata=400,
                  noise_amplitude=0.02,
                  coding_fraction=0.3,
                  rotate=False,
                  symplex=False)
 
+conditions = {
+    'Stimulus': {
+        'r': lambda s: s.behaviour_color == 'red',
+        'g': lambda s: s.behaviour_color == 'green'
+    }}
 mydec = Decodanda(data=s1,
                   conditions=conditions,
-                  verbose=False)
-
-mydec.CCGP(plot=True)
-
-mydec.geometrical_analysis(training_fraction=0.8, nshuffles=20, visualize=True)
-plt.suptitle('Disentangled representations')
-plt.savefig('./geometry_analysis_disentangled.pdf')
-
-# Entangled representations
-s1 = FakeSession(n_neurons=120,
-                 ndata=2000,
-                 noise_amplitude=0.02,
-                 coding_fraction=0.3,
-                 rotate=True,
-                 symplex=True)
-
-mydec = Decodanda(data=s1,
-                  conditions=conditions,
-                  verbose=False)
-
-mydec.geometrical_analysis(training_fraction=0.8, nshuffles=20, visualize=True)
-plt.suptitle('Entangled representations')
-plt.savefig('./geometry_analysis_entangled.pdf')
+                  verbose=True).decode(training_fraction=0.75, plot=True)
