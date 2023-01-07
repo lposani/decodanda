@@ -17,11 +17,11 @@ In addition, Decodanda exposes a series of functions to compute the
 Cross-Condition Generalization Performance (_CCGP_, Bernardi et al. 2020) 
 for the geometrical analysis of neural population activity.
 
-Please refer to the following notebooks [examples.ipynb](https://github.com/lposani/decodanda/blob/master/notebooks) for some examples on
+Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master/notebooks) for some examples on
 - [single-variable decoding](https://github.com/lposani/decodanda/blob/master/single_var_decoding.ipynb)
-- [multi-variable decoding]([https://github.com/lposani/decodanda/blob/master/multi_var_decoding.ipynb]) (disentangling correlated variables)
-- [decoding in time]([https://github.com/lposani/decodanda/blob/master/decoding_in_time.ipynb])
-- [CCGP and geometrical analysis]([https://github.com/lposani/decodanda/blob/master/geometry.ipynb])
+- [multi-variable decoding](https://github.com/lposani/decodanda/blob/master/multi_var_decoding.ipynb) (disentangling correlated variables)
+- [decoding in time](https://github.com/lposani/decodanda/blob/master/decoding_in_time.ipynb)
+- [CCGP and geometrical analysis](https://github.com/lposani/decodanda/blob/master/geometry.ipynb)
 
 For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
