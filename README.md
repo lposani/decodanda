@@ -20,6 +20,7 @@ for the geometrical analysis of neural population activity.
 Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master/notebooks) for some examples on
 - [single-variable decoding](https://github.com/lposani/decodanda/blob/master/single_var_decoding.ipynb)
 - [multi-variable decoding](https://github.com/lposani/decodanda/blob/master/multi_var_decoding.ipynb) (disentangling correlated variables)
+- [pseudo-population decoding](https://github.com/lposani/decodanda/blob/master/pseudopopulation_decoding.ipynb) (pooling neurons from multiple data sets)
 - [decoding in time](https://github.com/lposani/decodanda/blob/master/decoding_in_time.ipynb)
 - [CCGP and geometrical analysis](https://github.com/lposani/decodanda/blob/master/geometry.ipynb)
 
