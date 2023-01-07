@@ -1274,9 +1274,9 @@ def visualize_synthetic_data(session):
 
     axs[1].plot(session['trial'], color='k')
     axs[2].plot(session[keys[0]])
-    axs[3].plot(session[keys[1]])
+    axs[3].plot(session[keys[1]], color=pltcolors[1])
 
-    axs[0].set_title('spikes')
+    axs[0].set_title('raster')
     axs[1].set_title('trial')
     axs[2].set_title(keys[0])
     axs[3].set_title(keys[1])

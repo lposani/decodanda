@@ -63,13 +63,13 @@ synchronized with the ```raster``` array.
 
     
 
-Visually, a properly-aligned data set with two experimental variables (e.g., _stimulus_ and _action_) would look like this:
+A properly-formatted data set with two experimental variables (here, _stimulus_ and _action_) would look like this:
 ```python
 data = {
     'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
+    'trial':  [0, 0, 0, ..., T],                       # <Tx1 array>, trial number
     'stimulus': [-1, -1, 1, ..., 1],                   # <Tx1 array>, binary labels for stimulus
     'action': [1, -1, 1, ..., -1],                     # <Tx1 array>, binary labels for action
-    'trial':  [0, 0, 0, ..., T],                       # <Tx1 array>, trial number
 }
 ```
 <img src="./images/session_example.png" width="600"/>
