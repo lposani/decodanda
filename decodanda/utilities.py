@@ -981,9 +981,7 @@ def generate_synthetic_data(n_neurons=50, n_trials=10, timebins_per_trial=10, ke
                 if f < 0:
                     f = 0
                 lam = rates[n] * f
-                print(lam)
                 activity = np.random.poisson(lam=lam, size=np.sum(mask))
-                print(activity)
                 x[mask] = activity
         raster.append(x)
 
