@@ -14,26 +14,9 @@ from decodanda import Decodanda, FakeSession
 
 np.random.seed(0)
 
-conditions = {
-    'number': {
-        '1': lambda s: s.behaviour_number < 1.5,
-        '2': lambda s: s.behaviour_number > 1.5
-    },
-
-    'letter': {
-        'A': lambda s: s.behaviour_letter == 'A',
-        'B': lambda s: s.behaviour_letter == 'B'
-    },
-
-    'color': {
-        'r': lambda s: s.behaviour_color == 'red',
-        'g': lambda s: s.behaviour_color == 'green'
-    }
-}
-
 # Disentangled representations
-s1 = FakeSession(n_neurons=70,
-                 ndata=400,
+s1 = FakeSession(n_neurons=120,
+                 ndata=500,
                  noise_amplitude=0.02,
                  coding_fraction=0.3,
                  rotate=False,
@@ -41,9 +24,12 @@ s1 = FakeSession(n_neurons=70,
 
 conditions = {
     'Stimulus': {
-        'r': lambda s: s.behaviour_color == 'red',
-        'g': lambda s: s.behaviour_color == 'green'
-    }}
+        'A': lambda s: s.behaviour_letter == 'A',
+        'B': lambda s: s.behaviour_letter == 'B'
+    },
+}
 mydec = Decodanda(data=s1,
                   conditions=conditions,
-                  verbose=True).decode(training_fraction=0.75, plot=True)
+                  verbose=True)
+mydec.decode(training_fraction=0.75, plot=True)
+mydec.CCGP(plot=True)

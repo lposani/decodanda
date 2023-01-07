@@ -1,18 +1,27 @@
 # Decodanda
 <hr>
 
-Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") is a best-practices-made-easy Python package for decoding neural data.
+Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") 
+is a best-practices-made-easy Python package for decoding and geometrical analysis of neural data.
 
-Decodanda is designed to expose a user-friendly and flexible interface for population activity decoding.
-Decodanda implements a series of built-in best practices to avoid the most common and dangerous pitfalls in decoding:
+Decodanda is designed to expose a user-friendly and flexible interface for population activity decoding, with 
+a series of built-in best practices to avoid the most common pitfalls:
 
 - Classes are automatically balanced by resampling
-- All decoding analyses are cross-validated using a default or specified trial structure
-- All functions support multiple sessions out of the box to create pseudo-populations
-- All analyses come with a built-in null model to test the significance of decoding performance
-- When handling multiple variables, each non-decoded variable is balanced across classes to avoid the confounding effects of correlated conditions.
+- Cross-validation is automatically implemented using a default or specified trial structure
+- Multi-sessions pooling is supported out of the box to decode from pseudo populations
+- All analyses come with a built-in null model to test the significance of the data performance
+- When handling multiple variables, each _non-decoded_ variable is balanced across _decoded_ classes to avoid the confounding effects of correlated conditions.
 
-Please refer to [examples.ipynb](https://github.com/lposani/decodanda/blob/master/examples.ipynb) for some usage examples.
+In addition, Decodanda exposes a series of functions to compute the 
+Cross-Condition Generalization Performance (_CCGP_, Bernardi et al. 2020) 
+for the geometrical analysis of neural population activity.
+
+Please refer to the following notebooks [examples.ipynb](https://github.com/lposani/decodanda/blob/master/notebooks) for some examples on
+- [single-variable decoding](https://github.com/lposani/decodanda/blob/master/single_var_decoding.ipynb)
+- [multi-variable decoding]([https://github.com/lposani/decodanda/blob/master/multi_var_decoding.ipynb]) (disentangling correlated variables)
+- [decoding in time]([https://github.com/lposani/decodanda/blob/master/decoding_in_time.ipynb])
+- [CCGP and geometrical analysis]([https://github.com/lposani/decodanda/blob/master/geometry.ipynb])
 
 For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
@@ -31,6 +40,41 @@ python3 setup.py install
 ```
 
 from the home folder of the package. It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/tutorials/installing-packages/#creating-and-using-virtual-environments) to manage packages and dependencies.
+
+### Data structure
+<hr>
+Decodanda works with datasets organized into Python dictionaries. 
+For N recorded neurons and T trials (or time bins), the data dictionary must contain:
+
+1. a ```TxN``` array, under the ```raster``` key
+
+This is the set of features we use to decode. Can be continuous (e.g., calcium fluorescence) or discrete (e.g., spikes) values.
+  
+2. a ```Tx1``` array specifying a ```trial``` number
+
+This array will define the subdivisions for cross validation: trials (or time bins) that share the
+same ```trial``` value will always go together in either training or testing samples.
+
+    
+3. a ```Tx1``` array for each variable we want to decode
+
+Each value will be used as a label for the ```raster``` feature. Make sure these arrays are
+synchronized with the ```raster``` array.
+
+    
+
+Visually, a properly-aligned data set with two experimental variables (e.g., _stimulus_ and _action_) would look like this:
+```python
+data = {
+    'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],   # <TxN array>, neural activations 
+    'stimulus': [-1, -1, 1, ..., 1],                   # <Tx1 array>, binary labels for stimulus
+    'action': [1, -1, 1, ..., -1],                     # <Tx1 array>, binary labels for action
+    'trial':  [0, 0, 0, ..., T],                       # <Tx1 array>, trial number
+}
+```
+<img src="./images/session_example.png" width="600"/>
+
+
 
 ### Decoding one variable from neural activity
 <hr>

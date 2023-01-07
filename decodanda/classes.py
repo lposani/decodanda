@@ -627,7 +627,7 @@ class Decodanda:
             perfs_nullmodel['XOR'] = perfs_null_xor
         if plot:
             if not ax:
-                f, ax = plt.subplots(figsize=(2 * len(semantic_dics), 4))
+                f, ax = plt.subplots(figsize=(0.5+1.8 * len(semantic_dics), 3.5))
             plot_perfs_null_model(perfs, perfs_nullmodel, ylabel='Decoding performance', ax=ax, **kwargs)
 
         return perfs, perfs_nullmodel
@@ -648,7 +648,7 @@ class Decodanda:
 
         if plot:
             if not ax:
-                f, ax = plt.subplots(figsize=(2 * len(semantic_dics), 4))
+                f, ax = plt.subplots(figsize=(0.5+1.8 * len(semantic_dics), 3.5))
             plot_perfs_null_model(ccgp, ccgp_nullmodel, ylabel='CCGP', ax=ax, **kwargs)
 
         return ccgp, ccgp_nullmodel

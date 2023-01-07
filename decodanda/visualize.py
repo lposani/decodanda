@@ -87,7 +87,7 @@ def plot_perfs(perfs_in, labels=None, x=0, ax=None, color=None, marker='o', alph
 
 
 def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding performance', ax=None, shownull=False,
-                          chance=0.5, setup=True, ptype='count', **kwargs):
+                          chance=0.5, setup=True, ptype='z', annotate=True, ylow=0.27, yhigh=1.02, **kwargs):
     labels = list(perfs.keys())
     pvals = {}
     if not ax:
@@ -98,8 +98,9 @@ def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding p
         sns.violinplot(ax=ax, data=pd.DataFrame(perfs_nullmodel, columns=labels), color=[0.8, 0.8, 0.8, 0.3], bw=.25,
                        cut=0, inner=None)
     if setup:
-        setup_decoding_axis(ax, labels, ylow=0.28, yhigh=1.02, null=chance)
+        setup_decoding_axis(ax, labels, ylow=ylow, yhigh=yhigh, null=chance)
     ax.set_ylabel(ylabel)
+    ax.set_ylim([ylow, yhigh])
 
     for i, l in enumerate(labels):
         if ptype == 'count':
@@ -112,10 +113,19 @@ def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding p
 
         if ptype == 'zscore' or ptype == 'z':
             ax.errorbar([i], np.nanmean(perfs_nullmodel[l]), yerr=2 * np.nanstd(perfs_nullmodel[l]), color='k',
-                        linewidth=2, capsize=5, marker='_', alpha=1.0)
+                        linewidth=2, capsize=5, marker='_', alpha=0.5)
             pval = z_pval(perfs[l], perfs_nullmodel[l])[1]
 
         ax.scatter([i], [perfs[l]], marker=marker, s=100, color=pltcolors[i], facecolor='none', linewidth=2)
+        if annotate:
+            ptext = p_to_text(pval).split('\n')[1]
+            trans = transforms.blended_transform_factory(
+                ax.transData, ax.transAxes)
+            ax.text(i-0.22, 0.0,
+                    'data=%.2f\nnull=%.2f$\pm$%.2f\n%s' %
+                    (perfs[l], np.nanmean(perfs_nullmodel[l]), np.nanstd(perfs_nullmodel[l]), ptext),
+                    va='bottom', ha='left', fontsize=7, backgroundcolor='1.00', transform=trans)
+            ax.set_xticklabels(labels, rotation=0, ha='center')
 
         pvals[l] = pval
         if pval < 0.05:
