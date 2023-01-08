@@ -80,6 +80,9 @@ data = {
 ### Decoding one variable from neural activity
 <hr>
 
+([Notebook](https://github.com/lposani/decodanda/blob/master/notebooks/single_var_decoding.ipynb))
+
+
 All decoding functions are implemented as methods of the ```Decodanda``` class. 
 The constructor of this class takes two main objects:
 
@@ -136,13 +139,15 @@ which outputs
 If ```plot=true``` is specified in ```decode()```, the function will show the performance compared
 to the null model (with errorbars spanning 2 STDs) and a significance notation based on the z-score:
 
-<img src="./images/decoding_stimulus.png" width="300"/>
+<img src="./images/decoding.png" width="300"/>
 
 
 <br/>
 
-### Decoding multiple variables from neural activity
+### Decoding multiple variables and disentangling confounds
 <hr>
+
+([Notebook](https://github.com/lposani/decodanda/blob/master/notebooks/disentangling_confounds.ipynb))
 
 It often happens that different conditions in an experiment are correlated to each other. 
 For example, in a simple stimulus to action association task (```stimulus: A``` -> ```action: left```; ```stimulus: B``` -> ```action: right```), the action performed by a trained subject would clearly be correlated to the presented stimulus.
@@ -199,6 +204,8 @@ From which we can deduce that ```stimulus``` is represented in the neural activi
 ### Decoding from pseudo-populations data 
 <hr>
 
+([Notebook](https://github.com/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb))
+
 Decodanda supports pooling from multiple data sets to create pseudo-populations out of the box.
 To use multiple data sets, just pass a list of dictionaries to the ```Decodanda``` constructor:
 
@@ -247,10 +254,67 @@ dec = Decodanda(
 performances, null = dec.decode(training_fraction=0.75)
 ```
 
-### CCGP 
+### Cross-condition Generalization Performance
 <hr>
 
-TODO
+([Notebook](https://github.com/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb))
+
+First defined in Bernardi et al. (Cell, 2020), the Cross-Condition Generalization Performance (CCGP)
+is a geometrical measure of how well a classifier trained to decode a variable under specific conditions 
+(values of the other variables) generalizes to new ones.
+Variables with a high CCGP are called _abstract_ or _disentangled_.
+
+In geometrical terms, a high CCGP is an indication of a low-dimensional geometry where the coding
+directions of individual variables are parallel in different conditions. For example, consider a setup
+where a subject interacts with two stimuli (noted as 1, 2) that can be placed at two specific locations
+ (left, right). The problem is characterized by 2 binary variables ```identity = {1, 2}``` 
+and ```position = {left, right}```, for a total of 4 conditions (combinations of varibales).
+
+The relative position of these 4 conditions in the neural activity space defines 
+the _representational geometry_ of the two variables. CCGP, along with decoding performance, can be used 
+as a tool to reveal this geometry:
+
+<img src="./images/geometry.png" width="300"/>
+
+(image adapted from Boyle, Posani et al. 2023)
+
+Decodanda implements CCGP as a function of the ```Decodanda``` class, with a specific null-model that
+keeps conditions decodable but breaks their geometrical relationship (see Bernardi et al. 2020, Boyle, Posani et al. 2023):
+
+```python
+from decodanda import Decodanda
+
+# data has the following structure
+#     'raster': [[0, 1, ..., 0], ..., [0, 0, ..., 1]],  
+#     'identity': ['1', '2', '1', ..., '1']             
+#     'position': ['left', 'right', 'left', ..., 'left'],       
+#     'trial':  [1, 2, 3, ..., T],                       
+# 
+
+conditions = {
+    'identity': ['1', '2'],
+    'position': ['left', 'right']
+}
+
+dec = Decodanda(
+        data=data,
+        conditions=conditions)
+
+perf, null = dec.CCGP(nshuffles=20)
+
+```
+returns:
+```text
+>>> perf
+{'identity': 0.72, 'position': 0.68}  # generalization performance for each variable across the other one
+>>> null
+{'identity' [0.58, 0.41 ... 0.52], 'position': [0.57, 0.43, ..., 0.44]}  # 2 x nshuffles (20) values
+```
+
+with ```plot=True``` it will return a visualization similar to the ```decode()``` function:
+
+<img src="./images/ccgp.png" width="300"/>
+
 
 ### Balance data for different decoding analyses to compare performances
 <hr>

@@ -964,6 +964,7 @@ def generate_synthetic_data(n_neurons=50, n_trials=10, timebins_per_trial=10, ke
     rates = np.random.lognormal(meanfr, scale, n_neurons)
     rA = np.random.randn(n_neurons) * rateA
     rB = np.random.randn(n_neurons) * rateB
+    rC = np.random.randn(n_neurons) * (rateB+rateA)/2.
 
     # sample activity
     raster = []
@@ -973,10 +974,9 @@ def generate_synthetic_data(n_neurons=50, n_trials=10, timebins_per_trial=10, ke
             for B in [-1, 1]:
                 mask = (behavior_B == B) & (behavior_A == A)
                 if n > n_neurons/2:
-                    f = (1 - mixing_factor) * rA[n] * A + mixing_factor * rB[n] * B
+                    f = (1 - mixing_factor) * rA[n] * A + mixing_factor * rB[n] * B + rA[n] * (A*B) * mixed_term
                 else:
-                    f = (1 - mixing_factor) * rB[n] * B + mixing_factor * rA[n] * A
-                f += mixed_term * A * B * (rA[n] + rB[n])/2.
+                    f = (1 - mixing_factor) * rB[n] * B + mixing_factor * rA[n] * A + rB[n] * (A*B) * mixed_term
                 f -= 2 * np.min(np.hstack([rA, rB]))
                 if f < 0:
                     f = 0
