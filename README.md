@@ -76,6 +76,7 @@ data = {
 <img src="./images/session_example.png" width="600"/>
 
 
+## Use cases
 
 ### Decoding one variable from neural activity
 <hr>
@@ -257,7 +258,7 @@ performances, null = dec.decode(training_fraction=0.75)
 ### Cross-condition Generalization Performance
 <hr>
 
-([Notebook](https://github.com/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb))
+([Notebook](https://github.com/lposani/decodanda/blob/master/notebooks/CCGP.ipynb))
 
 First defined in Bernardi et al. (Cell, 2020), the Cross-Condition Generalization Performance (CCGP)
 is a geometrical measure of how well a classifier trained to decode a variable under specific conditions 
@@ -311,9 +312,9 @@ returns:
 {'identity' [0.58, 0.41 ... 0.52], 'position': [0.57, 0.43, ..., 0.44]}  # 2 x nshuffles (20) values
 ```
 
-with ```plot=True``` it will return a visualization similar to the ```decode()``` function:
+with ```plot=True``` it will return this visualization:
 
-<img src="./images/ccgp.png" width="300"/>
+<img src="./images/lowDccgp.png" width="300"/>
 
 
 ### Balance data for different decoding analyses to compare performances
@@ -405,7 +406,7 @@ perfs, null = dec.decode(training_fraction=0.9,
                          cross_validations=10)
 
 ```
-
+## Main objects
 ### `Decodanda()` constructor parameters
 
 | parameter                   | type                                                                                                                                                                      | description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
