@@ -314,7 +314,7 @@ returns:
 
 with ```plot=True``` it will return this visualization:
 
-<img src="./images/lowDccgp.png" width="300"/>
+<img src="./images/lowDccgp.png" width="400"/>
 
 
 ### Balance data for different decoding analyses to compare performances
