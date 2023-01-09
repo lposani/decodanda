@@ -275,7 +275,7 @@ The relative position of these 4 conditions in the neural activity space defines
 the _representational geometry_ of the two variables. CCGP, along with decoding performance, can be used 
 as a tool to reveal this geometry:
 
-<img src="./images/geometry.png" width="800"/>
+<img src="./images/geometry.png" width="900"/>
 
 (image adapted from Boyle, Posani et al. 2023)
 
