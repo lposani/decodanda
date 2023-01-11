@@ -1,4 +1,7 @@
 import copy
+
+import numpy as np
+
 from .imports import *
 from .utilities import *
 from .visualize import *
@@ -281,21 +284,79 @@ class Decodanda:
 
     # Dichotomy decoding functions
 
-    def decode_dichotomy(self, dic: list, training_fraction: float, cross_validations=10, ndata='auto', shuffled=False,
-                         parallel=False, destroy_correlations=False, testing_trials=None, **kwargs):
+    def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,
+                         cross_validations: int = 10, ndata: Optional[int] = None,
+                         shuffled: bool = False, parallel: bool = False,
+                         testing_trials: Optional[list] = None, **kwargs) -> list:
         """
         Function that performs cross-validated decoding of a specific dichotomy.
 
-        :param dic: the dichotomy to be decoded, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']]
-        :param training_fraction: the fraction of trials used for training in each cross-validation fold.
-        :param cross_validations: the number of cross-validations
-        :param ndata: the number of population vectors sampled for training and for testing per each condition.
-        :param shuffled: if True, population vectors for each condition are sampled in a shuffled way compatible with a null model.
-        :param parallel: if True, each cross-validation is performed by a dedicated thread (experimental).
-        :param destroy_correlations: if True, correlations within populatin vectors in the sampled training and testing data are destroyed by horizontal shuffling.
-        :param testing_trials: if specified, these trials will be used for testing, and the remaining ones for training.
-        :return: performances: list of decoding performance values for each cross-validation.
+        Parameters
+        ----------
+            dichotomy:
+                The dichotomy to be decoded, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']], or as a variable name.
+            training_fraction:
+                the fraction of trials used for training in each cross-validation fold.
+            cross_validations:
+                the number of cross-validations.
+            ndata:
+                the number of data points (population vectors) sampled for training and for testing for each condition.
+            shuffled:
+                if True, population vectors for each condition are sampled in a random way compatibly with a null model for decoding performance.
+            parallel:
+                if True, each cross-validation is performed by a dedicated thread (experimental, use with caution).
+            testing_trials:
+                if specified, data sampled from the specified trial numbers will be used for testing, and the remaining ones for training.
+
+        Returns
+        -------
+            performances: list of decoding performance values for each cross-validation.
+
+        Note
+        ----
+        dic can be a string with the same name of the variable specified in the conditions dictionary, or
+        a list of two lists, each specifying the conditions used to define the decoded classes in binary notation
+
+        For example, if the data set has two variables `stimulus` :math:`\\in` {-1, 1} and `action` :math:`\\in` {-1, 1}
+
+
+        >>> dic = 'stimulus'
+
+        is equivalent to
+
+        >>> dic = [['00', '01'], ['10', '11']]
+
+        and
+
+        >>> dic = 'action'
+
+        is equivalent to
+
+        >>> dic = [['00', '10'], ['01, '11]]
+
+        However, not all dichotomies have names (are semantic). For example, the dichotomy
+
+        >>> xor = [['01','10'], ['00', '11']]
+
+        can only be defined in binary notation.
+
+        Note that this function gives you the flexibility to use sub-sets of conditions, for example
+
+        >>> dic = [['10'], ['01']]
+
+        will decode stimulus=1 & action=-1  vs.  stimulus=-1 & action=1
+
+
+        Example
+        -------
+        >>> data = generate_synthetic_data(keyA='stimulus', keyB='action')
+        >>> dec = Decodanda(data=data, conditions={'stimulus': [-1, 1], 'action': [-1, 1]})
+        >>> perfs = dec.decode_dichotomy('stimulus', training_fraction=0.75, cross_validations=10)
+        >>> perfs
+        [0.82, 0.87, 0.75, ..., 0.77] # 10 values
+
         """
+
         # TODO: make these comments into proper doc
         # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
         # Example: dic = [['10', '11'], ['00', '01']]
@@ -303,11 +364,13 @@ class Decodanda:
         # Decoding works by sampling a balanced amount of patterns from each condition in each class of the dichotomy
         # Each condition is individually divided into training and testing bins
 
-        # TODO: add variable call for semantic dichotomies
-
-        if ndata == 'auto' and self.n_brains == 1:
+        if type(dichotomy) == str:
+            dic = self.dichotomy_from_key(dichotomy)
+        else:
+            dic = dichotomy
+        if ndata is None and self.n_brains == 1:
             ndata = self.max_conditioned_data
-        if ndata == 'auto' and self.n_brains > 1:
+        if ndata is None and self.n_brains > 1:
             ndata = max(self.max_conditioned_data, 2 * self.n_neurons)
 
         if shuffled:
@@ -435,6 +498,8 @@ class Decodanda:
         #
         # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
         # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
+        if type(dic) == str:
+            dic = self.dichotomy_from_key(dic)
 
         if ndata == 'auto' and self.n_brains == 1:
             ndata = self.max_conditioned_data
