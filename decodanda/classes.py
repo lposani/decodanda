@@ -191,7 +191,7 @@ class Decodanda:
 
         # handling discrete dict conditions
         if type(list(conditions.values())[0]) == list:
-            conditions = generate_binary_conditions(conditions)
+            conditions = _generate_binary_conditions(conditions)
 
         # setting input parameters
         self.data = data
@@ -1431,134 +1431,7 @@ class Decodanda:
         return True
 
 
-# Utilities
-
-# TODO: for all utilities: write doc or make private
-
-def check_session_requirements(session, conditions, **decodanda_params):
-    d = Decodanda(session, conditions, fault_tolerance=True, **decodanda_params)
-    if d.n_brains:
-        return True
-    else:
-        return False
-
-
-def check_requirements_two_conditions(sessions, conditions_1, conditions_2, **decodanda_params):
-    good_sessions = []
-    for s in sessions:
-        if check_session_requirements(s, conditions_1, **decodanda_params) and check_session_requirements(s,
-                                                                                                          conditions_2,
-                                                                                                          **decodanda_params):
-            good_sessions.append(s)
-    return good_sessions
-
-
-def balance_decodandas(ds):
-    for i in range(len(ds)):
-        for j in range(i + 1, len(ds)):
-            balance_two_decodandas(ds[i], ds[j])
-
-
-def balance_two_decodandas(d1, d2, sampling_strategy='random'):
-    assert d1.n_brains == d2.n_brains, "The two decodandas do not have the same number of brains."
-    assert d1.n_conditions == d2.n_conditions, "The two decodanda do not have the same number of semantic conditions."
-
-    n_brains = d1.n_brains
-    n_conditioned_rasters = len(list(d1.conditioned_rasters.values()))
-
-    for n in range(n_brains):
-        for i in range(n_conditioned_rasters):
-            t1 = list(d1.conditioned_rasters.values())[i][n].shape[0]
-            t2 = list(d2.conditioned_rasters.values())[i][n].shape[0]
-            t = min(t1, t2)
-
-            if t1 > t2:
-                if sampling_strategy == 'random':
-                    sampling = np.random.choice(t1, t2, replace=False)
-                if sampling_strategy == 'ordered':
-                    sampling = np.arange(t2, dtype=int)
-                list(d1.conditioned_rasters.values())[i][n] = list(d1.conditioned_rasters.values())[i][n][sampling, :]
-                list(d1.conditioned_trial_index.values())[i][n] = list(d1.conditioned_trial_index.values())[i][n][
-                    sampling]
-
-            if t2 > t1:
-                if sampling_strategy == 'random':
-                    sampling = np.random.choice(t2, t1, replace=False)
-                if sampling_strategy == 'ordered':
-                    sampling = np.arange(t1, dtype=int)
-                list(d2.conditioned_rasters.values())[i][n] = list(d2.conditioned_rasters.values())[i][n][sampling, :]
-                list(d2.conditioned_trial_index.values())[i][n] = list(d2.conditioned_trial_index.values())[i][n][
-                    sampling]
-
-            print("Balancing data for d1: %u, d2: %u - now d1: %u, d2: %u" % (
-                t1, t2, list(d1.conditioned_rasters.values())[i][n].shape[0],
-                list(d2.conditioned_rasters.values())[i][n].shape[0]))
-
-    for w in d1.conditioned_rasters.keys():
-        d1.ordered_conditioned_rasters[w] = d1.conditioned_rasters[w].copy()
-        d1.ordered_conditioned_trial_index[w] = d1.conditioned_trial_index[w].copy()
-        d2.ordered_conditioned_rasters[w] = d2.conditioned_rasters[w].copy()
-        d2.ordered_conditioned_trial_index[w] = d2.conditioned_trial_index[w].copy()
-
-    print("\n")
-
-
-def generate_binary_condition(var_key, value1, value2, key1=None, key2=None, var_key_plot=None):
-    if key1 is None:
-        key1 = '%s' % value1
-    if key2 is None:
-        key2 = '%s' % value2
-    if var_key_plot is None:
-        var_key_plot = var_key
-
-    conditions = {
-        var_key_plot: {
-            key1: lambda d, x=value1: d[var_key] == x,
-            key2: lambda d, x=value2: d[var_key] == x,
-        }
-    }
-
-    return conditions
-
-
-def generate_binary_conditions(discrete_dict):
-    conditions = {}
-    for key in discrete_dict.keys():
-        conditions[key] = {
-            '%s' % discrete_dict[key][0]: lambda d, k=key: getattr(d, k) == discrete_dict[k][0],
-            '%s' % discrete_dict[key][1]: lambda d, k=key: getattr(d, k) == discrete_dict[k][1],
-        }
-    return conditions
-
-
-class _NullmodelIterator(object):  # necessary for parallelization of null model iterations
-    def __init__(self, data, conditions, decodanda_params, analysis_params):
-        self.data = data
-        self.conditions = conditions
-        self.decodanda_params = decodanda_params
-        self.analysis_params = analysis_params
-
-    def __call__(self, i):
-        self.i = i
-        self.randomstate = RandomState(i)
-        dec = Decodanda(data=self.data, conditions=self.conditions, **self.decodanda_params)
-        semantic_dics, semantic_keys = dec._find_semantic_dichotomies()
-        if 'XOR' in self.analysis_params.keys():
-            if self.analysis_params['XOR'] and len(self.conditions) == 2:
-                semantic_dics.append([['01', '10'], ['00', '11']])
-                semantic_keys.append('XOR')
-
-        perfs = {}
-        for key, dic in zip(semantic_keys, semantic_dics):
-            if dec._verbose:
-                print("\nTesting null decoding performance for semantic dichotomy: ", key)
-            dec._shuffle_conditioned_arrays(dic)
-            performance = dec.decode_dichotomy(dic, **self.analysis_params)
-            perfs[key] = np.nanmean(performance)
-            dec._order_conditioned_rasters()
-
-        return perfs
-
+# Wrapper for decoding
 
 def decoding_analysis(data, conditions, decodanda_params, analysis_params, parallel=False, plot=False, ax=None):
     """
@@ -1628,3 +1501,132 @@ def decoding_analysis(data, conditions, decodanda_params, analysis_params, paral
     if plot:
         plot_perfs_null_model(performances, null, ax=ax, ptype='zscore')
     return performances, null
+
+
+# Utilities
+
+
+def check_session_requirements(session, conditions, **decodanda_params):
+    d = Decodanda(session, conditions, fault_tolerance=True, **decodanda_params)
+    if d.n_brains:
+        return True
+    else:
+        return False
+
+
+def check_requirements_two_conditions(sessions, conditions_1, conditions_2, **decodanda_params):
+    good_sessions = []
+    for s in sessions:
+        if check_session_requirements(s, conditions_1, **decodanda_params) and check_session_requirements(s,
+                                                                                                          conditions_2,
+                                                                                                          **decodanda_params):
+            good_sessions.append(s)
+    return good_sessions
+
+
+def balance_decodandas(ds):
+    for i in range(len(ds)):
+        for j in range(i + 1, len(ds)):
+            _balance_two_decodandas(ds[i], ds[j])
+
+
+def _balance_two_decodandas(d1, d2, sampling_strategy='random'):
+    assert d1.n_brains == d2.n_brains, "The two decodandas do not have the same number of brains."
+    assert d1.n_conditions == d2.n_conditions, "The two decodanda do not have the same number of semantic conditions."
+
+    n_brains = d1.n_brains
+    n_conditioned_rasters = len(list(d1.conditioned_rasters.values()))
+
+    for n in range(n_brains):
+        for i in range(n_conditioned_rasters):
+            t1 = list(d1.conditioned_rasters.values())[i][n].shape[0]
+            t2 = list(d2.conditioned_rasters.values())[i][n].shape[0]
+            t = min(t1, t2)
+
+            if t1 > t2:
+                if sampling_strategy == 'random':
+                    sampling = np.random.choice(t1, t2, replace=False)
+                if sampling_strategy == 'ordered':
+                    sampling = np.arange(t2, dtype=int)
+                list(d1.conditioned_rasters.values())[i][n] = list(d1.conditioned_rasters.values())[i][n][sampling, :]
+                list(d1.conditioned_trial_index.values())[i][n] = list(d1.conditioned_trial_index.values())[i][n][
+                    sampling]
+
+            if t2 > t1:
+                if sampling_strategy == 'random':
+                    sampling = np.random.choice(t2, t1, replace=False)
+                if sampling_strategy == 'ordered':
+                    sampling = np.arange(t1, dtype=int)
+                list(d2.conditioned_rasters.values())[i][n] = list(d2.conditioned_rasters.values())[i][n][sampling, :]
+                list(d2.conditioned_trial_index.values())[i][n] = list(d2.conditioned_trial_index.values())[i][n][
+                    sampling]
+
+            print("Balancing data for d1: %u, d2: %u - now d1: %u, d2: %u" % (
+                t1, t2, list(d1.conditioned_rasters.values())[i][n].shape[0],
+                list(d2.conditioned_rasters.values())[i][n].shape[0]))
+
+    for w in d1.conditioned_rasters.keys():
+        d1.ordered_conditioned_rasters[w] = d1.conditioned_rasters[w].copy()
+        d1.ordered_conditioned_trial_index[w] = d1.conditioned_trial_index[w].copy()
+        d2.ordered_conditioned_rasters[w] = d2.conditioned_rasters[w].copy()
+        d2.ordered_conditioned_trial_index[w] = d2.conditioned_trial_index[w].copy()
+
+    print("\n")
+
+
+def _generate_binary_condition(var_key, value1, value2, key1=None, key2=None, var_key_plot=None):
+    if key1 is None:
+        key1 = '%s' % value1
+    if key2 is None:
+        key2 = '%s' % value2
+    if var_key_plot is None:
+        var_key_plot = var_key
+
+    conditions = {
+        var_key_plot: {
+            key1: lambda d, x=value1: d[var_key] == x,
+            key2: lambda d, x=value2: d[var_key] == x,
+        }
+    }
+
+    return conditions
+
+
+def _generate_binary_conditions(discrete_dict):
+    conditions = {}
+    for key in discrete_dict.keys():
+        conditions[key] = {
+            '%s' % discrete_dict[key][0]: lambda d, k=key: getattr(d, k) == discrete_dict[k][0],
+            '%s' % discrete_dict[key][1]: lambda d, k=key: getattr(d, k) == discrete_dict[k][1],
+        }
+    return conditions
+
+
+class _NullmodelIterator(object):  # necessary for parallelization of null model iterations
+    def __init__(self, data, conditions, decodanda_params, analysis_params):
+        self.data = data
+        self.conditions = conditions
+        self.decodanda_params = decodanda_params
+        self.analysis_params = analysis_params
+
+    def __call__(self, i):
+        self.i = i
+        self.randomstate = RandomState(i)
+        dec = Decodanda(data=self.data, conditions=self.conditions, **self.decodanda_params)
+        semantic_dics, semantic_keys = dec._find_semantic_dichotomies()
+        if 'XOR' in self.analysis_params.keys():
+            if self.analysis_params['XOR'] and len(self.conditions) == 2:
+                semantic_dics.append([['01', '10'], ['00', '11']])
+                semantic_keys.append('XOR')
+
+        perfs = {}
+        for key, dic in zip(semantic_keys, semantic_dics):
+            if dec._verbose:
+                print("\nTesting null decoding performance for semantic dichotomy: ", key)
+            dec._shuffle_conditioned_arrays(dic)
+            performance = dec.decode_dichotomy(dic, **self.analysis_params)
+            perfs[key] = np.nanmean(performance)
+            dec._order_conditioned_rasters()
+
+        return perfs
+

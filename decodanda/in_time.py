@@ -1,4 +1,4 @@
-from .classes import Decodanda, generate_binary_conditions
+from .classes import Decodanda, _generate_binary_conditions
 from .visualize import line_with_shade
 from .imports import *
 from .utilities import p_to_ast, z_pval
@@ -162,7 +162,7 @@ def decoding_at_time(data, conditions, time_attr, time, dt, decodanda_params, de
     # creating new conditions using the conditions lambda functions plus the specific time filter
     # caution: extreme lambda abstraction involved
     if type(list(conditions.values())[0]) == list:
-        conditions = generate_binary_conditions(conditions)
+        conditions = _generate_binary_conditions(conditions)
     t_conditions = {}
 
     for key in conditions:
@@ -180,7 +180,7 @@ def CCGP_at_time(data, conditions, time_attr, time, dt, decodanda_params, decodi
     # creating new conditions using the conditions lambda functions plus the specific time filter
     # caution: extreme lambda abstraction involved
     if type(list(conditions.values())[0]) == list:
-        conditions = generate_binary_conditions(conditions)
+        conditions = _generate_binary_conditions(conditions)
     t_conditions = {}
 
     for key in conditions:
