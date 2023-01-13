@@ -1,6 +1,7 @@
 import copy
 from typing import Tuple, Union
 
+import matplotlib.axes
 import numpy as np
 from numpy import ndarray
 
@@ -206,7 +207,6 @@ class Decodanda:
         :param training_fraction: the fraction of trials used for training.
         :param ndata: the number of population vectors sampled for training and for testing per each condition.
         :param shuffled: if True, population vectors for each condition are sampled in a shuffled way compatible with a null model.
-        :param destroy_correlations: if True, correlations within populatin vectors in the sampled training and testing data are destroyed by horizontal shuffling.
         :param testing_trials: if specified, these trials will be used for testing, and the remaining ones for training.
         :return: performance: decoding performance.
         """
@@ -680,11 +680,100 @@ class Decodanda:
 
     # Analysis functions for semantic dichotomies
 
-    def decode(self, training_fraction, cross_validations=10, nshuffles=25, ndata='auto', plot=False, ax=None,
-               parallel=False, xor=False, return_CV=False, destroy_correlations=False, testing_trials=None,
-               plot_all=False,
+    def decode(self, training_fraction: float, cross_validations: int = 10, nshuffles: int = 10,
+               ndata: Optional[int] = None,
+               parallel: bool = False,
+               non_semantic: bool = False,
+               return_CV: bool = False,
+               testing_trials: Optional[list] = None,
+               plot: bool = False,
+               ax: Optional[plt.Axes] = None,
+               plot_all: bool = False,
                **kwargs):
-        # TODO: definitely write doc
+
+        """
+        Main function to decode the variables specified in the ``conditions`` dictionary.
+
+        It returns a single decoding value per variable which represents the average over
+        the cross-validation folds.
+
+        It also returns an array of null-model values for each variable to test the significance of
+        the corresponding decoding result.
+
+        Notes
+        -----
+
+        Each decoding analysis is performed by first re-sampling an equal number of data points
+        from each condition (combination of variable values), so to ensure that possible confounds
+        due to correlated conditions are balanced out.
+
+
+        Before sampling, each condition is individually divided into training and testing bins
+        by using the ``self.trial`` array specified in the data structure when constructing the ``Decodanda`` object.
+
+
+        To generate the null model values, the relationship between the neural data and
+        the decoded variable is randomly shuffled. Eeach null model value corresponds to the
+        average across ``cross_validations``` iterations after a single data shuffle.
+
+
+        If ``non_semantic=True``, dichotomies that do not correspond to variables will also be decoded.
+        Note that, in the case of 2 variables, there is only one non-semantic dichotomy
+        (corresponding to grouping together conditions that have the same XOR value in the
+        binary notation: ``[['10', '01'], ['11', '00']]``). However, the number of non-semantic dichotomies
+        grows exponentially with the number of conditions, so use with caution if more than two variables
+        are specified in the conditions dictionary.
+
+
+        Parameters
+        ----------
+        training_fraction:
+            the fraction of trials used for training in each cross-validation fold.
+        cross_validations:
+            the number of cross-validations.
+        nshuffles:
+            the number of null-model iterations of the decoding procedure.
+        ndata:
+            the number of data points (population vectors) sampled for training and for testing for each condition.
+        parallel:
+            if True, each cross-validation is performed by a dedicated thread (experimental, use with caution).
+        return_CV:
+            if True, invidual cross-validation values are returned in a list. Otherwise, the average performance over the cross-validation folds is returned.
+        testing_trials:
+            if specified, data sampled from the specified trial numbers will be used for testing, and the remaining ones for training.
+        non_semantic:
+            if True, non-semantic dichotomies (i.e., dichotomies that do not correspond to a variable) will also be decoded.
+        plot:
+            if True, a visualization of the decoding results is shown.
+        ax:
+            if specified and ``plot=True``, the results will be duplayed in the specified axis instead of a new figure.
+        plot_all:
+            if True, a more in-depth visualization of the decoding results and of the decoded data is shown.
+
+
+        Returns
+        -------
+            perfs:
+                a dictionary containing the decoding performances for all variables in the form of ``{var_name_1: performance1, var_name_2: performance2, ...}``
+            null:
+                a dictionary containing an array of null model decoding performance for each variable in the form ``{var_name_1: [...], var_name_2: [...], ...}``.
+
+        See Also
+        --------
+            Decodanda.decode_with_nullmodel: The method used for each decoding analysis.
+
+
+        Example
+        -------
+        >>> from decodanda import Decodanda, generate_synthetic_data
+        >>> data = generate_synthetic_data(keyA='stimulus', keyB='action')
+        >>> dec = Decodanda(data=data, conditions={'stimulus': [-1, 1], 'action': [-1, 1]})
+        >>> perfs, null = dec.decode(training_fraction=0.75, cross_validations=10, nshuffles=20)
+        >>> perfs
+        {'stimulus': 0.88, 'action': 0.85}  # mean over 10 cross-validation folds
+        >>> null
+        {'stimulus': [0.51, ..., 0.46], 'action': [0.48, ..., 0.55]}  # null model means, 20 values each
+        """
 
         semantic_dics, semantic_keys = self._find_semantic_dichotomies()
 
@@ -701,7 +790,6 @@ class Decodanda:
                 nshuffles=nshuffles,
                 parallel=parallel,
                 return_CV=return_CV,
-                destroy_correlations=destroy_correlations,
                 testing_trials=testing_trials,
                 plot=plot_all)
 
@@ -711,20 +799,22 @@ class Decodanda:
         # TODO: maybe create another function that decodes all non-semantic dychotomies instead of adding XOR here?
         # TODO: or a keyword that decodes all non-semantic as well? And XOR becomes the key for dim=2
 
-        if xor and len(self.conditions) == 2:
+        if non_semantic and len(self.conditions) == 2:
             xor_dic = [['01', '10'], ['00', '11']]
-            perfs_xor, perfs_null_xor = self.decode_with_nullmodel(dic=xor_dic,
+            perfs_xor, perfs_null_xor = self.decode_with_nullmodel(dichotomy=xor_dic,
                                                                    training_fraction=training_fraction,
                                                                    cross_validations=cross_validations,
                                                                    nshuffles=nshuffles,
                                                                    parallel=parallel,
                                                                    ndata=ndata,
                                                                    return_CV=return_CV,
-                                                                   destroy_correlations=destroy_correlations,
                                                                    testing_trials=testing_trials,
                                                                    plot=plot_all)
             perfs['XOR'] = perfs_xor
             perfs_nullmodel['XOR'] = perfs_null_xor
+
+        if non_semantic and len(self.conditions > 2):
+            dics, keys = self._find_nonsemantic_dichotomies()
         if plot:
             if not ax:
                 f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(semantic_dics), 3.5))

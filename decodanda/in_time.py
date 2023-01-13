@@ -173,7 +173,7 @@ def decoding_at_time(data, conditions, time_attr, time, dt, decodanda_params, de
             t_conditions[key][sub_key] = lambda d, t0=time, mk=key, k=sub_key: conditions[mk][k](d) & (
                     d[time_attr] >= t0) & (d[
                                                time_attr] < t0 + dt)  # pass these  ^      ^       ^   as default args to allow iteration
-    perfs, null = Decodanda(data=data, conditions=t_conditions, **decodanda_params).decode(xor=True, **decoding_params)
+    perfs, null = Decodanda(data=data, conditions=t_conditions, **decodanda_params).decode(non_semantic=True, **decoding_params)
     return perfs, null
 
 
