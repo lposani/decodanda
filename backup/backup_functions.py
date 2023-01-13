@@ -653,7 +653,7 @@ def selectivity_vs_geometry(self, sel_percentiles, cross_validations=5, nshuffle
 
         # decoding by using only non-selective cells - key1
         self.subset = np.where(selective_cells)[0]
-        res = self.CCGP_dichotomy(sd[0], ntrials=5)
+        res = self.CCGP_dichotomy(sd[0], resamplings=5)
         self._reset_random_subset()
 
         data[key1].append(np.nanmean(res))
@@ -661,7 +661,7 @@ def selectivity_vs_geometry(self, sel_percentiles, cross_validations=5, nshuffle
         # decoding by random subsampling cells - key1
         for n in range(nshuffles):
             self._generate_random_subset(n_cells)
-            res = self.CCGP_dichotomy(sd[0], ntrials=5)
+            res = self.CCGP_dichotomy(sd[0], resamplings=5)
 
             self._reset_random_subset()
             null[key1][i, n] = np.nanmean(res)
@@ -672,7 +672,7 @@ def selectivity_vs_geometry(self, sel_percentiles, cross_validations=5, nshuffle
 
         # decoding by using only non-selective cells - key2
         self.subset = np.where(selective_cells)[0]
-        res = self.CCGP_dichotomy(sd[1], ntrials=5)
+        res = self.CCGP_dichotomy(sd[1], resamplings=5)
         self._reset_random_subset()
 
         data[key2].append(np.nanmean(res))
@@ -680,7 +680,7 @@ def selectivity_vs_geometry(self, sel_percentiles, cross_validations=5, nshuffle
         # decoding by random subsampling cells - key1
         for n in range(nshuffles):
             self._generate_random_subset(n_cells)
-            res = self.CCGP_dichotomy(sd[1], ntrials=5)
+            res = self.CCGP_dichotomy(sd[1], resamplings=5)
             self._reset_random_subset()
             null[key2][i, n] = np.nanmean(res)
 
@@ -1072,6 +1072,108 @@ def geometry_analysis(dec, training_fraction=0.8,
 
     return data, null
 
+# This is CCGP with the old null model
+def CCGP_dichotomy_old(self, dichotomy, ntrials=3, ndata='auto', only_semantic=True, shuffled=False,
+                       destroy_correlations=False):
+    """
+
+    Parameters
+    ----------
+    dichotomy
+    ntrials
+    ndata
+    only_semantic
+    shuffled
+    destroy_correlations
+
+    Returns
+    -------
+
+    """
+    # TODO: make these comments into proper doc
+    # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
+    # Example: dic = [['10', '11'], ['00', '01']]
+    #
+    # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
+    # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
+    if type(dichotomy) == str:
+        dic = self.dichotomy_from_key(dichotomy)
+    else:
+        dic = dichotomy
+
+    if ndata == 'auto' and self.n_brains == 1:
+        ndata = self.max_conditioned_data
+    if ndata == 'auto' and self.n_brains > 1:
+        ndata = max(self.max_conditioned_data, 2 * self.n_neurons)
+
+    if self.verbose and not shuffled:
+        log_dichotomy(self, dic, ndata, 'Cross-condition decoding')
+
+    if shuffled:
+        self._rototraslate_conditioned_rasters()
+    else:
+        self._print('\nLooping over CCGP sampling repetitions:')
+
+    all_performances = []
+    if not shuffled and self.verbose:
+        iterable = tqdm(range(ntrials))
+    else:
+        iterable = range(ntrials)
+
+    for n in iterable:
+        performances = []
+
+        set_A = dic[0]
+        set_B = dic[1]
+
+        for i in range(len(set_A)):
+            for j in range(len(set_B)):
+                test_condition_A = set_A[i]
+                test_condition_B = set_B[j]
+                # TODO: do we need the only_semantic keyword?
+                if only_semantic:
+                    go = (hamming(string_bool(test_condition_A), string_bool(test_condition_B)) == 1)
+                else:
+                    go = True
+                if go:
+                    training_conditions_A = [x for iA, x in enumerate(set_A) if iA != i]
+                    training_conditions_B = [x for iB, x in enumerate(set_B) if iB != j]
+
+                    training_array_A = []
+                    training_array_B = []
+                    label_A = ''
+                    label_B = ''
+
+                    for ck in training_conditions_A:
+                        arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                        training_array_A.append(arr)
+                        label_A += (self.semantic_vectors[ck] + ' ')
+
+                    for ck in training_conditions_B:
+                        arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                        training_array_B.append(arr)
+                        label_B += (self.semantic_vectors[ck] + ' ')
+
+                    training_array_A = np.vstack(training_array_A)
+                    training_array_B = np.vstack(training_array_B)
+
+                    testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A], ndata=ndata)
+                    testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B], ndata=ndata)
+
+                    if destroy_correlations:
+                        destroy_time_correlations(training_array_A)
+                        destroy_time_correlations(training_array_B)
+                        destroy_time_correlations(testing_array_A)
+                        destroy_time_correlations(testing_array_B)
+
+                    self._train(training_array_A, training_array_B, label_A, label_B)
+                    performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
+                    performances.append(performance)
+
+        all_performances.append(np.nanmean(performances))
+    if shuffled:
+        self._order_conditioned_rasters()
+    return all_performances
 
 # Visualization
 

@@ -1,35 +1,22 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from decodanda import Decodanda, FakeSession
+from decodanda import Decodanda, generate_synthetic_data, visualize_synthetic_data
 
-# We create a synthetic data set where neurons respond to two variables, labeled as
-#  - behaviour_letter (taking values A, B)
-#  - behaviour_number (taking values 1, 2)
-# neural activity is stored under the 'raster' keyword
-#
-# Through the geometry_analysis() function, here we test
-# - the decoding() function
-# - the CCGP() function
-# - all the dichotomy logic
+# Test disentangling confounds: the "action" variable should be decodable when analyzed
+# individually but NOT be decodable when properly balanced with the "stimulus" one.
 
 np.random.seed(0)
 
-# Disentangled representations
-s1 = FakeSession(n_neurons=120,
-                 ndata=500,
-                 noise_amplitude=0.02,
-                 coding_fraction=0.3,
-                 rotate=False,
-                 symplex=False)
+data = generate_synthetic_data(n_neurons=80, n_trials=100, rateB=0, rateA=0.3, keyA='stimulus', keyB='action', corrAB=0.8)
+dec = Decodanda(data=data, conditions={'action': [-1, 1], 'stimulus': [-1, 1]}, verbose=True)
+dec.decode_with_nullmodel([['01'], ['10']], 0.75, nshuffles=3)
 
-conditions = {
-    'Stimulus': {
-        'A': lambda s: s.behaviour_letter == 'A',
-        'B': lambda s: s.behaviour_letter == 'B'
-    },
-}
-mydec = Decodanda(data=s1,
-                  conditions=conditions,
-                  verbose=True)
-mydec.decode(training_fraction=0.75, plot=True)
-mydec.CCGP(plot=True)
+
+# This analysis should give a positive performance
+res_unbalanced = Decodanda(data=data, conditions={'action': [-1, 1]}).decode_dichotomy('action', 0.75)
+
+# This analysis should give a negative performance
+res_balanced = Decodanda(data=data,
+                         conditions={'action': [-1, 1], 'stimulus': [-1, 1]}
+                         ).decode_dichotomy('action', 0.75)
+
+# weird stuff
