@@ -277,7 +277,7 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
     set_A = dic[0]
     label_A = ''
     for d in set_A:
-        label_A += (dec.semantic_vectors[d] + ' ')
+        label_A += (dec._semantic_vectors[d] + ' ')
         mfrA.append(dec.centroids[d])
     label_A = label_A[:-1]
     mfrA = np.nanmean(mfrA, 0)
@@ -285,7 +285,7 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
     set_B = dic[1]
     label_B = ''
     for d in set_B:
-        label_B += (dec.semantic_vectors[d] + ' ')
+        label_B += (dec._semantic_vectors[d] + ' ')
         mfrB.append(dec.centroids[d])
     label_B = label_B[:-1]
     mfrB = np.nanmean(mfrB, 0)
@@ -302,7 +302,7 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
                     ax.plot(np.arange(len(r)) + x, y + 3 * r / np.nanmax(dec.conditioned_rasters[key][brain_index]),
                             color=pltcolors[brain_index], alpha=0.5)
                     xnew = max(xnew, len(r))
-            ax.text(x, y * 1.03, dec.semantic_vectors[key])
+            ax.text(x, y * 1.03, dec._semantic_vectors[key])
             x = x + xnew * 1.1
         sns.despine(ax=ax)
         ax.set_ylabel('Neuron #')
@@ -386,9 +386,9 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
 
     if ndata == 'auto':
         if ndata == 'auto' and dec.n_brains == 1:
-            ndata = dec.max_conditioned_data
+            ndata = dec._max_conditioned_data
         if ndata == 'auto' and dec.n_brains > 1:
-            ndata = max(dec.max_conditioned_data, 2 * dec.n_neurons)
+            ndata = max(dec._max_conditioned_data, 2 * dec.n_neurons)
 
     for d in set_A:
         training, testing = sample_training_testing_from_rasters(dec.conditioned_rasters[d],

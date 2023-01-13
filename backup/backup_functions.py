@@ -9,13 +9,13 @@ from decodanda.classes import Decodanda
 def ablation_analysis(self, percentiles, cross_validations=25, training_fraction=0.9, metric='weight',
                       plot=False, axs=None, ndata='auto'):
     if metric == 'weight':
-        self.decoding_weights = {key: [] for key in self.semantic_keys}
+        self.decoding_weights = {key: [] for key in self._semantic_keys}
         self.semantic_decode(training_fraction=0.9, cross_validations=cross_validations, nshuffles=0)
         mean_decoding_weights = {key: np.abs(np.nanmean(self.decoding_weights[key], 0))[0] for key in
-                                 self.semantic_keys}
+                                 self._semantic_keys}
 
-    key1 = self.semantic_keys[0]
-    key2 = self.semantic_keys[1]
+    key1 = self._semantic_keys[0]
+    key2 = self._semantic_keys[1]
 
     if metric == 'weight':
         sel1 = np.abs(mean_decoding_weights[key1]) / np.sqrt(np.sum(mean_decoding_weights[key1] ** 2))
@@ -178,15 +178,15 @@ def single_neuron_modulation(self, nshuffles=2000, normalized=False, plot=False,
             sns.despine(f)
         axs[0].axhline([0], color='k')
         axs[0].axvline([0], color='k')
-        axs[0].set_xlabel('Firing rate modulation (%s)' % self.semantic_keys[0].split(' ')[0])
-        axs[0].set_ylabel('Firing rate modulation (%s)' % self.semantic_keys[1].split(' ')[0])
+        axs[0].set_xlabel('Firing rate modulation (%s)' % self._semantic_keys[0].split(' ')[0])
+        axs[0].set_ylabel('Firing rate modulation (%s)' % self._semantic_keys[1].split(' ')[0])
 
         axs[0].scatter(modulation_1[non_selective], modulation_2[non_selective], alpha=0.3, color='k',
                        label='Non selective', marker='x')
         axs[0].scatter(modulation_1[selective_1], modulation_2[selective_1], alpha=0.5,
-                       label=self.semantic_keys[0].split(' ')[0], marker='o')
+                       label=self._semantic_keys[0].split(' ')[0], marker='o')
         axs[0].scatter(modulation_1[selective_2], modulation_2[selective_2], alpha=0.5,
-                       label=self.semantic_keys[1].split(' ')[0], marker='o')
+                       label=self._semantic_keys[1].split(' ')[0], marker='o')
         axs[0].scatter(modulation_1[selective_mix], modulation_2[selective_mix], alpha=0.5, label='Both', marker='o')
         axs[0].legend()
         axs[1].bar([0], np.nanmean(selective_1))
@@ -195,7 +195,7 @@ def single_neuron_modulation(self, nshuffles=2000, normalized=False, plot=False,
         axs[1].bar([3], np.nanmean(non_selective), color='k', alpha=0.5)
         axs[1].set_xticks([0, 1, 2, 3])
         axs[1].set_xticklabels(
-            [self.semantic_keys[0].split(' ')[0], self.semantic_keys[1].split(' ')[0], 'Both', 'None'], rotation=60)
+            [self._semantic_keys[0].split(' ')[0], self._semantic_keys[1].split(' ')[0], 'Both', 'None'], rotation=60)
         axs[1].set_ylabel('Fraction of modulated neurons')
 
     return selective_1, selective_2, selective_mix, non_selective
@@ -204,11 +204,11 @@ def single_neuron_modulation(self, nshuffles=2000, normalized=False, plot=False,
 def population_selectivity(self, nshuffles=100, min_t=0.5, max_t=0.95, n_t=500, plot=True, axs=None,
                            metric='weight'):
     if metric == 'weight':
-        if len(self.decoding_weights[self.semantic_keys[0]]) == 0:
+        if len(self.decoding_weights[self._semantic_keys[0]]) == 0:
             self.semantic_decode(training_fraction=0.9, nshuffles=0)
 
         mean_decoding_weights = {key: np.abs(np.nanmean(self.decoding_weights[key], 0))[0] for key in
-                                 self.semantic_keys}
+                                 self._semantic_keys}
 
     thresholds = np.linspace(min_t, max_t, n_t)
     sd = self._find_semantic_dichotomies()[0]
@@ -216,10 +216,10 @@ def population_selectivity(self, nshuffles=100, min_t=0.5, max_t=0.95, n_t=500, 
     data = {}
     null = {}
 
-    for i in range(len(self.semantic_keys)):
-        for j in range(i + 1, len(self.semantic_keys)):
-            key1 = self.semantic_keys[i]
-            key2 = self.semantic_keys[j]
+    for i in range(len(self._semantic_keys)):
+        for j in range(i + 1, len(self._semantic_keys)):
+            key1 = self._semantic_keys[i]
+            key2 = self._semantic_keys[j]
 
             if metric == 'weight':
                 data1 = mean_decoding_weights[key1] / np.sqrt(np.sum(mean_decoding_weights[key1] ** 2.))
@@ -329,20 +329,20 @@ def population_selectivity(self, nshuffles=100, min_t=0.5, max_t=0.95, n_t=500, 
 
 def selectivity_angle(self, nshuffles=100, angles=5, plot=True, axs=None, metric='weight', cross_validations=20):
     if metric == 'weight':
-        if len(self.decoding_weights[self.semantic_keys[0]]) == 0:
+        if len(self.decoding_weights[self._semantic_keys[0]]) == 0:
             self.semantic_decode(training_fraction=0.9, nshuffles=0, cross_validations=cross_validations)
 
         mean_decoding_weights = {key: np.abs(np.nanmean(self.decoding_weights[key], 0))[0] for key in
-                                 self.semantic_keys}
+                                 self._semantic_keys}
 
     thresholds = np.linspace(0, np.pi / 2, angles + 1)
     dx = thresholds[1] - thresholds[0]
     sd = self._find_semantic_dichotomies()[0]
 
-    for i in range(len(self.semantic_keys)):
-        for j in range(i + 1, len(self.semantic_keys)):
-            key1 = self.semantic_keys[i]
-            key2 = self.semantic_keys[j]
+    for i in range(len(self._semantic_keys)):
+        for j in range(i + 1, len(self._semantic_keys)):
+            key1 = self._semantic_keys[i]
+            key2 = self._semantic_keys[j]
 
             if metric == 'weight':
                 data1 = mean_decoding_weights[key1] / np.sqrt(np.sum(mean_decoding_weights[key1] ** 2.))
@@ -412,16 +412,16 @@ def selectivity_angle(self, nshuffles=100, angles=5, plot=True, axs=None, metric
 def selectivity_vs_decoding(self, training_fraction, sel_percentiles, cross_validations=5, nshuffles=10,
                             metric='weight', ax=None, plot=False):
     if metric == 'weight' or metric == 'reverse xor' or metric == 'weight specialization':
-        self.decoding_weights = {key: [] for key in self.semantic_keys + ['XOR']}
+        self.decoding_weights = {key: [] for key in self._semantic_keys + ['XOR']}
         self.semantic_decode(training_fraction=0.9, cross_validations=cross_validations, nshuffles=0, xor=True)
         mean_decoding_weights = {key: np.abs(np.nanmean(self.decoding_weights[key], 0))[0] for key in
-                                 self.semantic_keys + ['XOR']}
+                                 self._semantic_keys + ['XOR']}
 
     sd = self._find_semantic_dichotomies()[0]
 
     # for the moment, let's assume only two variables
-    key1 = self.semantic_keys[0]
-    key2 = self.semantic_keys[1]
+    key1 = self._semantic_keys[0]
+    key2 = self._semantic_keys[1]
 
     if metric == 'weight':
         sel1 = np.abs(mean_decoding_weights[key1])
@@ -578,16 +578,16 @@ def selectivity_vs_decoding(self, training_fraction, sel_percentiles, cross_vali
 def selectivity_vs_geometry(self, sel_percentiles, cross_validations=5, nshuffles=10,
                             metric='weight', ax=None, plot=False):
     if metric == 'weight' or metric == 'reverse xor' or metric == 'weight specialization':
-        self.decoding_weights = {key: [] for key in self.semantic_keys + ['XOR']}
+        self.decoding_weights = {key: [] for key in self._semantic_keys + ['XOR']}
         self.semantic_decode(training_fraction=0.9, cross_validations=cross_validations, nshuffles=0, xor=True)
         mean_decoding_weights = {key: np.abs(np.nanmean(self.decoding_weights[key], 0))[0] for key in
-                                 self.semantic_keys + ['XOR']}
+                                 self._semantic_keys + ['XOR']}
 
     sd = self._find_semantic_dichotomies()[0]
 
     # for the moment, let's assume only two variables
-    key1 = self.semantic_keys[0]
-    key2 = self.semantic_keys[1]
+    key1 = self._semantic_keys[0]
+    key2 = self._semantic_keys[1]
 
     if metric == 'weight':
         sel1 = np.abs(mean_decoding_weights[key1])
@@ -708,19 +708,19 @@ def selectivity_vs_geometry(self, sel_percentiles, cross_validations=5, nshuffle
 
 def decoding_correlate(self, training_fraction, block_center, block_size=50, cross_validations=5, metric='weight'):
     if metric == 'weight' or metric == 'specialization':
-        for key in self.semantic_keys:
+        for key in self._semantic_keys:
             self.decoding_weights[key] = []
 
         self.semantic_decode(training_fraction=0.9, cross_validations=cross_validations, nshuffles=0)
 
         mean_decoding_weights = {key: np.abs(np.nanmean(self.decoding_weights[key], 0))[0] for key in
-                                 self.semantic_keys}
+                                 self._semantic_keys}
 
     sd = self._find_semantic_dichotomies()[0]
 
     # for the moment, let's assume only two variables
-    key1 = self.semantic_keys[0]
-    key2 = self.semantic_keys[1]
+    key1 = self._semantic_keys[0]
+    key2 = self._semantic_keys[1]
 
     if metric == 'weight':
         sel1 = mean_decoding_weights[key1] / np.sqrt(np.sum(mean_decoding_weights[key1] ** 2.))
@@ -778,7 +778,7 @@ def decode_with_subsamples(dec, training_fraction, n_neurons, nreps, cross_valid
     n_neurons = np.copy(n_neurons)
     n_neurons = n_neurons[n_neurons <= dec.n_neurons]
 
-    for key in dec.semantic_keys:
+    for key in dec._semantic_keys:
         results[key] = []
     if xor:
         results['XOR'] = []
@@ -794,7 +794,7 @@ def decode_with_subsamples(dec, training_fraction, n_neurons, nreps, cross_valid
         print(ndata)
 
         results_n = {}
-        for key in dec.semantic_keys:
+        for key in dec._semantic_keys:
             results_n[key] = []
         if xor:
             results_n['XOR'] = []
@@ -818,7 +818,7 @@ def decode_with_subsamples(dec, training_fraction, n_neurons, nreps, cross_valid
             ax.set_xlabel('N neurons')
             sns.despine(ax=ax)
             ax.axhline([0.5], color='k', linestyle='--')
-        for key in dec.semantic_keys:
+        for key in dec._semantic_keys:
             ax.errorbar(n_neurons, np.nanmean(results[key], 1), np.nanstd(results[key], 1),
                         label=key, marker='o', capsize=5, alpha=0.6)
         plt.legend()
@@ -852,7 +852,7 @@ def compute_parallelism_score(dec, nshuffles=10, plot=False, ax=None, xor=False)
                 cosines.append(cosine(selectivity_vectors[i], selectivity_vectors[j]))
         parallelism[key] = np.nanmean(cosines)
 
-        if dec.verbose and nshuffles:
+        if dec._verbose and nshuffles:
             count = tqdm(range(nshuffles))
         else:
             count = range(nshuffles)
@@ -891,11 +891,11 @@ def compute_square_score(dec, nshuffles=10, plot=False, axs=None):
     deltas_sem = []
     deltas_neur = []
 
-    sem_distances = cdist(dec.condition_vectors, dec.condition_vectors)
+    sem_distances = cdist(dec._condition_vectors, dec._condition_vectors)
     neur_distances = mahalanobis_dissimilarity(dec)
 
-    for i in range(len(dec.condition_vectors)):
-        for j in range(i + 1, len(dec.condition_vectors)):
+    for i in range(len(dec._condition_vectors)):
+        for j in range(i + 1, len(dec._condition_vectors)):
             deltas_sem.append(sem_distances[i, j])
             deltas_neur.append(neur_distances[i, j])
 
@@ -910,7 +910,7 @@ def compute_square_score(dec, nshuffles=10, plot=False, axs=None):
 
     r_null = []
 
-    if dec.verbose and nshuffles:
+    if dec._verbose and nshuffles:
         count = tqdm(range(nshuffles))
     else:
         count = range(nshuffles)
@@ -922,8 +922,8 @@ def compute_square_score(dec, nshuffles=10, plot=False, axs=None):
         deltas_neur = []
         neur_distances = mahalanobis_dissimilarity(dec)
 
-        for i in range(len(dec.condition_vectors)):
-            for j in range(i + 1, len(dec.condition_vectors)):
+        for i in range(len(dec._condition_vectors)):
+            for j in range(i + 1, len(dec._condition_vectors)):
                 deltas_sem.append(sem_distances[i, j])
                 deltas_neur.append(neur_distances[i, j])
 
@@ -945,7 +945,7 @@ def compute_planarity(dec, nshuffles=10, plot=False, ax=None):
     data = 1 - np.nanmean(planar_distances)
 
     shuffled = []
-    if dec.verbose and nshuffles:
+    if dec._verbose and nshuffles:
         count = tqdm(range(nshuffles))
     else:
         count = range(nshuffles)
@@ -1012,31 +1012,31 @@ def geometry_analysis(dec, training_fraction=0.8,
         sns.despine(fig)
 
         # non-CV quantities
-        if dec.verbose:
+        if dec._verbose:
             print("[Geometry analysis]\t computing Squarity")
         data['Squore'], null['Squore'] = dec.compute_square_score(nshuffles=nshuffles_noncv, plot=True,
                                                                   axs=[ax_scatter, ax_square])
 
-        if dec.verbose:
+        if dec._verbose:
             print("[Geometry analysis]\t computing Parallelism Score")
         data['Parallel'], null['Parallel'] = dec.compute_parallelism_score(nshuffles=nshuffles_noncv, plot=True,
                                                                            ax=ax_par)
 
-        if dec.verbose:
+        if dec._verbose:
             print("[Geometry analysis]\t computing Planarity")
         data['Planarity'], null['Planarity'] = dec.compute_planarity(nshuffles=nshuffles_noncv, plot=True,
                                                                      ax=ax_plan)
 
         # CV quantities
         if 'Decoding' not in data.keys():
-            if dec.verbose:
+            if dec._verbose:
                 print("[Geometry analysis]\t computing Decoding Performance")
             data['Decoding'], null['Decoding'] = dec.semantic_decode(training_fraction=training_fraction,
                                                                      cross_validations=cross_validations,
                                                                      nshuffles=nshuffles, xor=True,
                                                                      parallel=parallel)
         if 'CCGP' not in data.keys():
-            if dec.verbose:
+            if dec._verbose:
                 print("[Geometry analysis]\t computing CCGP")
             data['CCGP'], null['CCGP'] = dec.semantic_CCGP(nshuffles=nshuffles, ntrials=3)
 
@@ -1097,16 +1097,16 @@ def CCGP_dichotomy_old(self, dichotomy, ntrials=3, ndata='auto', only_semantic=T
     # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
     # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
     if type(dichotomy) == str:
-        dic = self.dichotomy_from_key(dichotomy)
+        dic = self._dichotomy_from_key(dichotomy)
     else:
         dic = dichotomy
 
     if ndata == 'auto' and self.n_brains == 1:
-        ndata = self.max_conditioned_data
+        ndata = self._max_conditioned_data
     if ndata == 'auto' and self.n_brains > 1:
-        ndata = max(self.max_conditioned_data, 2 * self.n_neurons)
+        ndata = max(self._max_conditioned_data, 2 * self.n_neurons)
 
-    if self.verbose and not shuffled:
+    if self._verbose and not shuffled:
         log_dichotomy(self, dic, ndata, 'Cross-condition decoding')
 
     if shuffled:
@@ -1115,7 +1115,7 @@ def CCGP_dichotomy_old(self, dichotomy, ntrials=3, ndata='auto', only_semantic=T
         self._print('\nLooping over CCGP sampling repetitions:')
 
     all_performances = []
-    if not shuffled and self.verbose:
+    if not shuffled and self._verbose:
         iterable = tqdm(range(ntrials))
     else:
         iterable = range(ntrials)
@@ -1147,12 +1147,12 @@ def CCGP_dichotomy_old(self, dichotomy, ntrials=3, ndata='auto', only_semantic=T
                     for ck in training_conditions_A:
                         arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
                         training_array_A.append(arr)
-                        label_A += (self.semantic_vectors[ck] + ' ')
+                        label_A += (self._semantic_vectors[ck] + ' ')
 
                     for ck in training_conditions_B:
                         arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
                         training_array_B.append(arr)
-                        label_B += (self.semantic_vectors[ck] + ' ')
+                        label_B += (self._semantic_vectors[ck] + ' ')
 
                     training_array_A = np.vstack(training_array_A)
                     training_array_B = np.vstack(training_array_B)
@@ -1188,7 +1188,7 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
     components = embedding.fit_transform(cos_dis)
 
     if names is None:
-        names = list(dec.semantic_vectors.keys())
+        names = list(dec._semantic_vectors.keys())
 
     if data is not None and null is not None:
         if axs is None:

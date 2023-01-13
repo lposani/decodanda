@@ -202,44 +202,41 @@ class Decodanda:
         if classifier == 'svc':
             classifier = LinearSVC(dual=False, C=1.0, class_weight='balanced', max_iter=5000)
         self.classifier = classifier
-        self.min_data_per_condition = min_data_per_condition
-        self.min_trials_per_condition = min_trials_per_condition
-        self.min_activations_per_cell = min_activations_per_cell
-        self.verbose = verbose
-        self.debug = debug
-        self.exclude_silent = exclude_silent
-        self.neural_attr = neural_attr
-        self.trial_attr = trial_attr
-        self.trial_chunk = trial_chunk
-        self.exclude_contiguous_trials = exclude_contiguous_chunks
+
+        # private params
+        self._min_data_per_condition = min_data_per_condition
+        self._min_trials_per_condition = min_trials_per_condition
+        self._min_activations_per_cell = min_activations_per_cell
+        self._verbose = verbose
+        self._debug = debug
+        self._exclude_silent = exclude_silent
+        self._neural_attr = neural_attr
+        self._trial_attr = trial_attr
+        self._trial_chunk = trial_chunk
+        self._exclude_contiguous_trials = exclude_contiguous_chunks
 
         # setting session(s) data
         self.n_sessions = len(data)
-        self.timebin = np.nan
-        # TODO: delete all references to timebin
-        if hasattr(data[0], 'timebin'):
-            self.timebin = data[0].timebin
-
         self.n_conditions = len(conditions)
-        self.max_conditioned_data = 0
-        self.min_conditioned_data = 10 ** 6
+        self._max_conditioned_data = 0
+        self._min_conditioned_data = 10 ** 6
         self.n_neurons = 0
         self.n_brains = 0
         self.which_brain = []
 
         # keys and stuff
-        self.condition_vectors = generate_binary_words(self.n_conditions)
-        self.semantic_keys = list(self.conditions.keys())
-        self.semantic_vectors = {string_bool(w): [] for w in generate_binary_words(self.n_conditions)}
+        self._condition_vectors = generate_binary_words(self.n_conditions)
+        self._semantic_keys = list(self.conditions.keys())
+        self._semantic_vectors = {string_bool(w): [] for w in generate_binary_words(self.n_conditions)}
         self._generate_semantic_vectors()
 
         # decoding weights
         if self.n_conditions == 2:
-            self.decoding_weights = {key: [] for key in self.semantic_keys + ['XOR']}
-            self.decoding_weights_null = {key: [] for key in self.semantic_keys + ['XOR']}
+            self.decoding_weights = {key: [] for key in self._semantic_keys + ['XOR']}
+            self.decoding_weights_null = {key: [] for key in self._semantic_keys + ['XOR']}
         else:
-            self.decoding_weights = {key: [] for key in self.semantic_keys}
-            self.decoding_weights_null = {key: [] for key in self.semantic_keys}
+            self.decoding_weights = {key: [] for key in self._semantic_keys}
+            self.decoding_weights_null = {key: [] for key in self._semantic_keys}
 
         # creating conditioned array with the following structure:
         #   define a condition_vector with boolean values for each semantic condition, es. 100
@@ -247,10 +244,10 @@ class Decodanda:
         #   as a value, create a list of neural data for each session conditioned as per key
 
         #   >>> main object: neural rasters conditioned to semantic vector <<<
-        self.conditioned_rasters = {string_bool(w): [] for w in self.condition_vectors}
+        self.conditioned_rasters = {string_bool(w): [] for w in self._condition_vectors}
 
         # conditioned null model index is the chunk division used for null model shuffles
-        self.conditioned_trial_index = {string_bool(w): [] for w in self.condition_vectors}
+        self.conditioned_trial_index = {string_bool(w): [] for w in self._condition_vectors}
 
         #   >>> main part: create conditioned arrays <<< ---------------------------------
         self._divide_data_into_conditions(data)
@@ -270,7 +267,7 @@ class Decodanda:
             self._compute_centroids()
 
             # null model variables
-            self.random_translations = {string_bool(w): [] for w in self.condition_vectors}
+            self.random_translations = {string_bool(w): [] for w in self._condition_vectors}
             self.subset = np.arange(self.n_neurons)
 
             self.ordered_conditioned_rasters = {}
@@ -306,7 +303,7 @@ class Decodanda:
 
         testing_raster = testing_raster[:, self.subset]
 
-        if self.debug:
+        if self._debug:
             print("Real labels")
             print(testing_labels)
             print("Predicted labels")
@@ -343,13 +340,13 @@ class Decodanda:
         set_A = dic[0]
         label_A = ''
         for d in set_A:
-            label_A += (self.semantic_vectors[d] + ' ')
+            label_A += (self._semantic_vectors[d] + ' ')
         label_A = label_A[:-1]
 
         set_B = dic[1]
         label_B = ''
         for d in set_B:
-            label_B += (self.semantic_vectors[d] + ' ')
+            label_B += (self._semantic_vectors[d] + ' ')
         label_B = label_B[:-1]
 
         training_array_A = []
@@ -363,9 +360,9 @@ class Decodanda:
                                                                      ndata,
                                                                      training_fraction,
                                                                      self.conditioned_trial_index[d],
-                                                                     debug=self.debug,
+                                                                     debug=self._debug,
                                                                      testing_trials=testing_trials)
-            if self.debug:
+            if self._debug:
                 plt.title('Condition A')
                 print("Sampling for condition A, d=%s" % d)
                 print("Conditioned raster mean:")
@@ -379,11 +376,11 @@ class Decodanda:
                                                                      ndata,
                                                                      training_fraction,
                                                                      self.conditioned_trial_index[d],
-                                                                     debug=self.debug,
+                                                                     debug=self._debug,
                                                                      testing_trials=testing_trials)
             training_array_B.append(training)
             testing_array_B.append(testing)
-            if self.debug:
+            if self._debug:
                 plt.title('Condition B')
                 print("Sampling for condition B, d=%s" % d)
                 print("Conditioned raster mean:")
@@ -394,7 +391,7 @@ class Decodanda:
         testing_array_A = np.vstack(testing_array_A)
         testing_array_B = np.vstack(testing_array_B)
 
-        if self.debug:
+        if self._debug:
             selectivity_training = np.nanmean(training_array_A, 0) - np.nanmean(training_array_B, 0)
             selectivity_testing = np.nanmean(testing_array_A, 0) - np.nanmean(testing_array_B, 0)
             corr_scatter(selectivity_training, selectivity_testing, 'Selectivity (training)', 'Selectivity (testing)')
@@ -509,18 +506,18 @@ class Decodanda:
         # Each condition is individually divided into training and testing bins
 
         if type(dichotomy) == str:
-            dic = self.dichotomy_from_key(dichotomy)
+            dic = self._dichotomy_from_key(dichotomy)
         else:
             dic = dichotomy
         if ndata is None and self.n_brains == 1:
-            ndata = self.max_conditioned_data
+            ndata = self._max_conditioned_data
         if ndata is None and self.n_brains > 1:
-            ndata = max(self.max_conditioned_data, 2 * self.n_neurons)
+            ndata = max(self._max_conditioned_data, 2 * self.n_neurons)
 
         if shuffled:
             self._shuffle_conditioned_arrays(dic)
 
-        if self.verbose and not shuffled:
+        if self._verbose and not shuffled:
             log_dichotomy(self, dic, ndata, 'Decoding')
             count = tqdm(range(cross_validations))
         else:
@@ -535,12 +532,12 @@ class Decodanda:
                                                    training_fraction=training_fraction,
                                                    ndata=ndata,
                                                    subset=self.subset,
-                                                   semantic_vectors=self.semantic_vectors),
+                                                   semantic_vectors=self._semantic_vectors),
                                     range(cross_validations))
 
         else:
             performances = np.zeros(cross_validations)
-            if self.verbose and not shuffled:
+            if self._verbose and not shuffled:
                 print('\nLooping over decoding cross validation folds:')
             for i in count:
                 performances[i] = self._one_cv_step(dic=dic, training_fraction=training_fraction, ndata=ndata,
@@ -558,18 +555,18 @@ class Decodanda:
         # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
         # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
         if type(dichotomy) == str:
-            dic = self.dichotomy_from_key(dichotomy)
+            dic = self._dichotomy_from_key(dichotomy)
         else:
             dic = dichotomy
 
         if ndata == 'auto' and self.n_brains == 1:
-            ndata = self.max_conditioned_data
+            ndata = self._max_conditioned_data
         if ndata == 'auto' and self.n_brains > 1:
-            ndata = max(self.max_conditioned_data, 2 * self.n_neurons)
+            ndata = max(self._max_conditioned_data, 2 * self.n_neurons)
 
         all_performances = []
 
-        if not shuffled and self.verbose:
+        if not shuffled and self._verbose:
             log_dichotomy(self, dic, ndata, 'Cross-condition decoding')
             iterable = tqdm(range(resamplings))
         else:
@@ -602,12 +599,12 @@ class Decodanda:
                         for ck in training_conditions_A:
                             arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
                             training_array_A.append(arr)
-                            label_A += (self.semantic_vectors[ck] + ' ')
+                            label_A += (self._semantic_vectors[ck] + ' ')
 
                         for ck in training_conditions_B:
                             arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
                             training_array_B.append(arr)
-                            label_B += (self.semantic_vectors[ck] + ' ')
+                            label_B += (self._semantic_vectors[ck] + ' ')
 
                         training_array_A = np.vstack(training_array_A)
                         training_array_B = np.vstack(training_array_B)
@@ -736,7 +733,7 @@ class Decodanda:
         """
 
         if type(dichotomy) == str:
-            dic = self.dichotomy_from_key(dichotomy)
+            dic = self._dichotomy_from_key(dichotomy)
         else:
             dic = dichotomy
 
@@ -751,7 +748,7 @@ class Decodanda:
         else:
             data_performance = np.nanmean(d_performances)
 
-        if self.verbose and nshuffles:
+        if self._verbose and nshuffles:
             print(
                 "\n[decode_with_nullmodel]\t data <p> = %.2f" % np.nanmean(d_performances))
             print('\n[decode_with_nullmodel]\tLooping over null model shuffles.')
@@ -786,7 +783,7 @@ class Decodanda:
         else:
             ccgp = np.nanmean(performances)
 
-        if self.verbose and nshuffles:
+        if self._verbose and nshuffles:
             print("\t\t[CCGP_with_nullmodel]\t\t----- Data: <p> = %.2f -----\n" % np.nanmean(performances))
             count = tqdm(range(nshuffles))
         else:
@@ -908,7 +905,7 @@ class Decodanda:
         perfs = {}
         perfs_nullmodel = {}
         for key, dic in zip(semantic_keys, semantic_dics):
-            if self.verbose:
+            if self._verbose:
                 print("\nTesting decoding performance for semantic dichotomy: ", key)
             performance, null_model_performances = self.decode_with_nullmodel(
                 dic,
@@ -971,7 +968,7 @@ class Decodanda:
         ccgp = {}
         ccgp_nullmodel = {}
         for key, dic in zip(semantic_keys, semantic_dics):
-            if self.verbose:
+            if self._verbose:
                 print("\nTesting CCGP for semantic dichotomy: ", key)
             data_ccgp, null_ccgps = self.CCGP_with_nullmodel(dic, ntrials, nshuffles, ndata,
                                                              only_semantic=only_semantic)
@@ -1103,7 +1100,7 @@ class Decodanda:
 
         for si, session in enumerate(sessions):
 
-            if self.verbose:
+            if self._verbose:
                 if hasattr(session, 'name'):
                     print("\t\t[Decodanda]\tbuilding conditioned rasters for session %s" % session.name)
                 else:
@@ -1113,27 +1110,27 @@ class Decodanda:
             session_conditioned_trial_index = {}
 
             # exclude inactive neurons
-            array = getattr(session, self.neural_attr)
+            array = getattr(session, self._neural_attr)
             total_mask = np.zeros(len(array)) > 0
 
-            for condition_vec in self.condition_vectors:
+            for condition_vec in self._condition_vectors:
                 mask = np.ones(len(array)) > 0
-                for i, sk in enumerate(self.semantic_keys):
+                for i, sk in enumerate(self._semantic_keys):
                     semantic_values = list(self.conditions[sk])
                     mask_i = self.conditions[sk][semantic_values[condition_vec[i]]](session)
                     mask = mask & mask_i
                 total_mask = total_mask | mask
 
-            min_activity_mask = np.sum(array[total_mask] > 0, 0) >= self.min_activations_per_cell
+            min_activity_mask = np.sum(array[total_mask] > 0, 0) >= self._min_activations_per_cell
 
-            for condition_vec in self.condition_vectors:
+            for condition_vec in self._condition_vectors:
                 # get the array from the session object
-                array = getattr(session, self.neural_attr)
+                array = getattr(session, self._neural_attr)
                 array = array[:, min_activity_mask]
 
                 # create a mask that becomes more and more restrictive by iterating on semanting conditions
                 mask = np.ones(len(array)) > 0
-                for i, sk in enumerate(self.semantic_keys):
+                for i, sk in enumerate(self._semantic_keys):
                     semantic_values = list(self.conditions[sk])
                     mask_i = self.conditions[sk][semantic_values[condition_vec[i]]](session)
                     mask = mask & mask_i
@@ -1147,23 +1144,23 @@ class Decodanda:
                 # trial: used for null model, changing labels between trials
                 # if trial_chunk_size is specified, chunk and trial are different objects.
 
-                if self.trial_attr is not None:
-                    conditioned_trial = getattr(session, self.trial_attr)[mask]
-                elif self.trial_chunk is None:
-                    if self.verbose:
+                if self._trial_attr is not None:
+                    conditioned_trial = getattr(session, self._trial_attr)[mask]
+                elif self._trial_chunk is None:
+                    if self._verbose:
                         print('[Decodanda]\tUsing contiguous chunks of the same labels as trials.')
                     conditioned_trial = contiguous_chunking(mask)[mask]
                 else:
-                    conditioned_trial = contiguous_chunking(mask, self.trial_chunk)[mask]
+                    conditioned_trial = contiguous_chunking(mask, self._trial_chunk)[mask]
 
-                if self.exclude_contiguous_trials:
+                if self._exclude_contiguous_trials:
                     contiguous_chunks = contiguous_chunking(mask)[mask]
                     nc_mask = non_contiguous_mask(contiguous_chunks, conditioned_trial)
                     conditioned_raster = conditioned_raster[nc_mask, :]
                     conditioned_trial = conditioned_trial[nc_mask]
 
                 # exclude empty time bins (only for binary discrete decoding)
-                if self.exclude_silent:
+                if self._exclude_silent:
                     active_mask = np.sum(conditioned_raster, 1) > 0
                     conditioned_raster = conditioned_raster[active_mask, :]
                     conditioned_trial = conditioned_trial[active_mask]
@@ -1172,9 +1169,9 @@ class Decodanda:
                 session_conditioned_rasters[string_bool(condition_vec)] = conditioned_raster
                 session_conditioned_trial_index[string_bool(condition_vec)] = conditioned_trial
 
-                if self.verbose:
+                if self._verbose:
                     semantic_vector_string = []
-                    for i, sk in enumerate(self.semantic_keys):
+                    for i, sk in enumerate(self._semantic_keys):
                         semantic_values = list(self.conditions[sk])
                         semantic_vector_string.append("%s = %s" % (sk, semantic_values[condition_vec[i]]))
                     semantic_vector_string = ', '.join(semantic_vector_string)
@@ -1185,24 +1182,24 @@ class Decodanda:
             session_conditioned_data = [r.shape[0] for r in list(session_conditioned_rasters.values())]
             session_conditioned_trials = [len(np.unique(c)) for c in list(session_conditioned_trial_index.values())]
 
-            self.max_conditioned_data = max([self.max_conditioned_data, np.max(session_conditioned_data)])
-            self.min_conditioned_data = min([self.min_conditioned_data, np.min(session_conditioned_data)])
+            self._max_conditioned_data = max([self._max_conditioned_data, np.max(session_conditioned_data)])
+            self._min_conditioned_data = min([self._min_conditioned_data, np.min(session_conditioned_data)])
 
             # if the session has enough data for each condition, append it to the main data dictionary
 
-            if np.min(session_conditioned_data) >= self.min_data_per_condition and \
-                    np.min(session_conditioned_trials) >= self.min_trials_per_condition:
-                for cv in self.condition_vectors:
+            if np.min(session_conditioned_data) >= self._min_data_per_condition and \
+                    np.min(session_conditioned_trials) >= self._min_trials_per_condition:
+                for cv in self._condition_vectors:
                     self.conditioned_rasters[string_bool(cv)].append(session_conditioned_rasters[string_bool(cv)])
                     self.conditioned_trial_index[string_bool(cv)].append(
                         session_conditioned_trial_index[string_bool(cv)])
-                if self.verbose:
+                if self._verbose:
                     print('\n')
                 self.n_brains += 1
                 self.n_neurons += list(session_conditioned_rasters.values())[0].shape[1]
                 self.which_brain.append(np.ones(list(session_conditioned_rasters.values())[0].shape[1]) * self.n_brains)
             else:
-                if self.verbose:
+                if self._verbose:
                     print('\t\t\t===> Session discarded for insufficient data.\n')
         if len(self.which_brain):
             self.which_brain = np.hstack(self.which_brain)
@@ -1217,7 +1214,7 @@ class Decodanda:
             col_sum = np.sum(d, 0)
             if (0 in col_sum) or (len(dic[0]) in col_sum):
                 semantic_dics.append(dic)
-                semantic_keys.append(self.semantic_keys[np.where(col_sum == len(dic[0]))[0][0]])
+                semantic_keys.append(self._semantic_keys[np.where(col_sum == len(dic[0]))[0][0]])
         return semantic_dics, semantic_keys
 
     def _find_nonsemantic_dichotomies(self):
@@ -1237,10 +1234,10 @@ class Decodanda:
                 d = [string_bool(x) for x in dic[i]]
                 col_sum = np.sum(d, 0)
                 if len(dic[0]) in col_sum:
-                    return self.semantic_keys[np.where(col_sum == len(dic[0]))[0][0]]
+                    return self._semantic_keys[np.where(col_sum == len(dic[0]))[0][0]]
         return 0
 
-    def dichotomy_from_key(self, key):
+    def _dichotomy_from_key(self, key):
         dics, keys = self._find_semantic_dichotomies()
         if key in keys:
             dic = dics[np.where(np.asarray(keys) == key)[0][0]]
@@ -1251,20 +1248,20 @@ class Decodanda:
         return dic
 
     def _generate_semantic_vectors(self):
-        for condition_vec in self.condition_vectors:
+        for condition_vec in self._condition_vectors:
             semantic_vector = '('
-            for i, sk in enumerate(self.semantic_keys):
+            for i, sk in enumerate(self._semantic_keys):
                 semantic_values = list(self.conditions[sk])
                 semantic_vector += semantic_values[condition_vec[i]]
             semantic_vector = semantic_vector + ')'
-            self.semantic_vectors[string_bool(condition_vec)] = semantic_vector
+            self._semantic_vectors[string_bool(condition_vec)] = semantic_vector
 
     def _compute_centroids(self):
         self.centroids = {w: np.hstack([np.nanmean(r, 0) for r in self.conditioned_rasters[w]])
                           for w in self.conditioned_rasters.keys()}
 
     def _zscore_activity(self):
-        keys = [string_bool(w) for w in self.condition_vectors]
+        keys = [string_bool(w) for w in self._condition_vectors]
         for n in range(self.n_brains):
             n_neurons = self.conditioned_rasters[keys[0]][n].shape[1]
             for i in range(n_neurons):
@@ -1276,7 +1273,7 @@ class Decodanda:
                         self.conditioned_rasters[key][n][:, i] = (self.conditioned_rasters[key][n][:, i] - m) / std
 
     def _print(self, string):
-        if self.verbose:
+        if self._verbose:
             print(string)
 
     # null model utilities
@@ -1356,7 +1353,7 @@ class Decodanda:
         else:
             for n in range(self.n_brains):
                 # select conditioned rasters
-                all_conditions = list(self.semantic_vectors.keys())
+                all_conditions = list(self._semantic_vectors.keys())
                 all_data = np.vstack([self.conditioned_rasters[cond][n] for cond in all_conditions])
                 all_trials = np.hstack([self.conditioned_trial_index[cond][n] for cond in all_conditions])
                 all_n_trials = {cond: len(np.unique(self.conditioned_trial_index[cond][n])) for cond in all_conditions}
@@ -1406,11 +1403,11 @@ class Decodanda:
             self.conditioned_trial_index[w] = self.ordered_conditioned_trial_index[w].copy()
 
     def _check_trial_availability(self):
-        if self.debug:
+        if self._debug:
             print('\nCheck trial availability')
         for k in self.conditioned_trial_index:
             for i, ti in enumerate(self.conditioned_trial_index[k]):
-                if self.debug:
+                if self._debug:
                     print(k, 'raster %u:' % i, np.unique(ti).shape[0])
                     print(ti)
                 if np.unique(ti).shape[0] < 2:
@@ -1537,7 +1534,7 @@ class NullmodelIterator(object):  # necessary for parallelization of null model 
 
         perfs = {}
         for key, dic in zip(semantic_keys, semantic_dics):
-            if dec.verbose:
+            if dec._verbose:
                 print("\nTesting null decoding performance for semantic dichotomy: ", key)
             dec._shuffle_conditioned_arrays(dic)
             performance = dec.decode_dichotomy(dic, **self.analysis_params)
@@ -1548,6 +1545,53 @@ class NullmodelIterator(object):  # necessary for parallelization of null model 
 
 
 def decoding_analysis(data, conditions, decodanda_params, analysis_params, parallel=False, plot=False, ax=None):
+    """
+    Function that performs a balanced decoding analyses of the
+    data set passed in the ``data`` argument, using variables and values
+    specified in the ``conditions`` dictionary.
+
+    This functions is a shortcut for building a ``Decodanda`` object
+    with ``decodanda_params`` as arguments and calling the ``Decodanda.decode`` function
+    with ``analysis_params`` as arguments.
+
+
+    See Also
+    --------
+    Decodanda
+
+    Decodanda.decode
+
+
+    Notes
+    -----
+    This function is equivalent to
+
+    >>> Decodanda(data, conditions, **decodanda_params).decode(**analysis_params)
+
+
+    Parameters
+    ----------
+    data
+        The data set used by the ``Decodanda`` object.
+    conditions
+        The conditions dictionary for the ``Decodanda`` object.
+    decodanda_params
+        A dictionary specifying the values for the ``Decodanda`` constructor parameters.
+    analysis_params
+        A dictionary specifying the values for the ``Decodanda.decode`` function parameters.
+    parallel
+        [Experimental] if ``True``, null model iterations are performed on separated threads.
+    plot
+        If ``True``, the decoding results are shown in a figure.
+    ax
+        If specified, and ``plot=True`` the results are shown in the specified axis.
+
+    Returns
+    -------
+        performances, null
+
+
+    """
     an_params = copy.deepcopy(analysis_params)
 
     if parallel:

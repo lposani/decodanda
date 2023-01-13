@@ -602,7 +602,7 @@ def cossim(x, y):
 
 
 def mahalanobis_dissimilarity(d):
-    semantic_keys = d.semantic_vectors.keys()
+    semantic_keys = d._semantic_vectors.keys()
 
     # compute block covariance matrix
     Cs = []
@@ -664,13 +664,13 @@ def log_dichotomy(dec, dic, ndata, s='Decoding'):
     set_A = dic[0]
     label_A = ''
     for d in set_A:
-        label_A += (dec.semantic_vectors[d] + ' ')
+        label_A += (dec._semantic_vectors[d] + ' ')
     label_A = label_A[:-1]
 
     set_B = dic[1]
     label_B = ''
     for d in set_B:
-        label_B += (dec.semantic_vectors[d] + ' ')
+        label_B += (dec._semantic_vectors[d] + ' ')
     label_B = label_B[:-1]
     if dec.n_conditions <= 2:
         print(
