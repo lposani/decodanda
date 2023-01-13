@@ -813,11 +813,25 @@ class Decodanda:
             perfs['XOR'] = perfs_xor
             perfs_nullmodel['XOR'] = perfs_null_xor
 
-        if non_semantic and len(self.conditions > 2):
-            dics, keys = self._find_nonsemantic_dichotomies()
+        if non_semantic and len(self.conditions) > 2:
+            dics = self._find_nonsemantic_dichotomies()
+            for dic in dics:
+                dic_key = '_'.join(dic[0]) + '__' + '_'.join(dic[1])
+                perfs_dic, null_dic = self.decode_with_nullmodel(dichotomy=dic,
+                                                                 training_fraction=training_fraction,
+                                                                 cross_validations=cross_validations,
+                                                                 nshuffles=nshuffles,
+                                                                 parallel=parallel,
+                                                                 ndata=ndata,
+                                                                 return_CV=return_CV,
+                                                                 testing_trials=testing_trials,
+                                                                 plot=plot_all)
+                perfs[dic_key] = perfs_dic
+                perfs_nullmodel[dic_key] = null_dic
+
         if plot:
             if not ax:
-                f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(semantic_dics), 3.5))
+                f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(perfs.keys()), 3.5))
             plot_perfs_null_model(perfs, perfs_nullmodel, ylabel='Decoding performance', ax=ax, **kwargs)
 
         return perfs, perfs_nullmodel
@@ -1090,7 +1104,7 @@ class Decodanda:
         return nonsemantic_dics
 
     def _dic_key(self, dic):
-        if len(dic[0]) == 2**(self.n_conditions-1) and len(dic[1]) == 2**(self.n_conditions-1):
+        if len(dic[0]) == 2 ** (self.n_conditions - 1) and len(dic[1]) == 2 ** (self.n_conditions - 1):
             for i in range(len(dic)):
                 d = [string_bool(x) for x in dic[i]]
                 col_sum = np.sum(d, 0)
@@ -1212,7 +1226,6 @@ class Decodanda:
                             self.conditioned_trial_index[test_condition_B][n] = np.hstack(new_trials_B)
 
         else:
-            print("\n\nShuffling all the things you are\n\n")
             for n in range(self.n_brains):
                 # select conditioned rasters
                 all_conditions = list(self.semantic_vectors.keys())

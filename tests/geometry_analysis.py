@@ -43,6 +43,7 @@ mydec = Decodanda(data=s1,
                   conditions=conditions,
                   verbose=False)
 
+
 mydec.CCGP(plot=True)
 
 mydec.geometrical_analysis(training_fraction=0.8, nshuffles=20, visualize=True)
