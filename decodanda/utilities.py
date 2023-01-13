@@ -709,6 +709,46 @@ def visualize_raster(raster, ax='auto', offset=0, order=None, colors=None):
     return ax
 
 
+def visualize_data_vs_null(data, null, value, ax=None):
+    # computing the P value of the z-score
+    from scipy.stats import norm
+    null_mean = np.nanmean(null)
+    z = (data - null_mean) / np.nanstd(null)
+    p = norm.sf(abs(z))
+
+    def p_to_ast(p):
+        if p < 0.001:
+            return '***'
+        if p < 0.01:
+            return '**'
+        if p < 0.05:
+            return '*'
+        if p >= 0.05:
+            return 'ns'
+
+    # visualizing
+    if ax is None:
+        f, ax = plt.subplots(figsize=(6, 3))
+    kde = scipy.stats.gaussian_kde(null)
+    null_x = np.linspace(np.nanmean(null)-5*np.nanstd(null), np.nanmean(null)+5*np.nanstd(null), 100)
+    null_y = kde(null_x)
+    ax.plot(null_x, null_y, color='k', alpha=0.5)
+    ax.fill_between(null_x, null_y, color='k', alpha=0.3)
+    ax.text(null_x[np.argmax(null_y)], np.max(null_y) * 1.05, 'null model', ha='center')
+    sns.despine(ax=ax)
+    ax.plot([data, data], [0, np.max(null_y)], color='red', linewidth=3)
+    ax.text(data, np.max(null_y) * 1.05, 'data', ha='center', color='red')
+    ax.set_xlabel(value)
+    if data < np.nanmean(null):
+        ax.text(0.85, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
+    else:
+        ax.text(0.15, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
+
+    ax.plot(null, np.zeros(len(null)), linestyle='', marker='|', color='k')
+    _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)], color='k', linestyle='--')
+    return z, p
+
+
 # Histogram comparison
 
 def histogram_comparison(Adata, Bdata, labelA, labelB, quantity, bins=None, ax=None):
@@ -847,97 +887,6 @@ def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False,
 
 
 # Synthetic data
-
-
-def generate_AB_activity(n_neurons, n_trials, separation, labelA='A', labelB='B'):
-    coding_level = 0.25
-    # generate activity for stimulus A
-    mean_A = np.random.rand(n_neurons) * separation  # define the mean
-    cov_A = np.eye(n_neurons)  # unitary diagonal covariance matrix
-
-    activity_A = np.random.multivariate_normal(
-        mean_A, cov_A, int(n_trials / 2))  # just sample from the gaussian
-    activity_A = (np.abs(activity_A) < coding_level).astype(float)
-
-    # generate activity for stimulus B
-    mean_B = np.random.rand(n_neurons) * separation
-    cov_B = np.eye(n_neurons)
-
-    activity_B = np.random.multivariate_normal(
-        mean_B, cov_B, int(n_trials / 2))
-    activity_B = (np.abs(activity_B) < coding_level).astype(float)
-
-    # put the activity together
-    V1_activity = np.vstack([activity_A, activity_B])
-    stimulus_labels = np.hstack([np.repeat(labelA, int(n_trials / 2)), np.repeat(labelB, int(n_trials / 2))])
-    # order the activity for plotting purposes
-    selectivity = np.mean(activity_A, 0) - np.mean(activity_B, 0)
-    order = np.argsort(selectivity)
-    V1_activity = V1_activity[:, order]
-
-    # return activity and labels
-    return V1_activity, stimulus_labels
-
-
-# visualization
-def visualize_AB_activity(labels, activity):
-    uniquelabs = np.unique(labels)
-    n_trials, n_neurons = activity.shape
-    f, ax = plt.subplots(figsize=(10, 5))
-    ax.set_xlabel('Trial')
-    ax.set_ylabel('Neuron #')
-    sns.despine(ax=ax)
-    ax.text(n_trials / 2, n_neurons * 1.1, 'Trial label', ha='center', fontsize=8)
-    for t in range(n_trials):
-        if labels[t] == uniquelabs[0]:
-            ax.text(t, n_neurons * 1.05, uniquelabs[0], color='r', fontsize=6)
-        if labels[t] == uniquelabs[1]:
-            ax.text(t, n_neurons * 1.05, uniquelabs[1], color='b', fontsize=6)
-    for i in range(int(n_neurons)):
-        nanact = np.copy(activity[:, i])
-        nanact[nanact == 0] = np.nan
-        ax.plot(i + nanact, marker='|', linestyle='', color='k', alpha=0.5, markersize=3)
-    return f, ax
-
-
-def visualize_data_vs_null(data, null, value, ax=None):
-    # computing the P value of the z-score
-    from scipy.stats import norm
-    null_mean = np.nanmean(null)
-    z = (data - null_mean) / np.nanstd(null)
-    p = norm.sf(abs(z))
-
-    def p_to_ast(p):
-        if p < 0.001:
-            return '***'
-        if p < 0.01:
-            return '**'
-        if p < 0.05:
-            return '*'
-        if p >= 0.05:
-            return 'ns'
-
-    # visualizing
-    if ax is None:
-        f, ax = plt.subplots(figsize=(6, 3))
-    kde = scipy.stats.gaussian_kde(null)
-    null_x = np.linspace(np.nanmean(null)-5*np.nanstd(null), np.nanmean(null)+5*np.nanstd(null), 100)
-    null_y = kde(null_x)
-    ax.plot(null_x, null_y, color='k', alpha=0.5)
-    ax.fill_between(null_x, null_y, color='k', alpha=0.3)
-    ax.text(null_x[np.argmax(null_y)], np.max(null_y) * 1.05, 'null model', ha='center')
-    sns.despine(ax=ax)
-    ax.plot([data, data], [0, np.max(null_y)], color='red', linewidth=3)
-    ax.text(data, np.max(null_y) * 1.05, 'data', ha='center', color='red')
-    ax.set_xlabel(value)
-    if data < np.nanmean(null):
-        ax.text(0.85, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
-    else:
-        ax.text(0.15, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
-
-    ax.plot(null, np.zeros(len(null)), linestyle='', marker='|', color='k')
-    _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)], color='k', linestyle='--')
-    return z, p
 
 
 def generate_synthetic_data(n_neurons=50, n_trials=10, timebins_per_trial=10, keyA='stimulus', keyB='action',
