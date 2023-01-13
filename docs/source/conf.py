@@ -12,13 +12,13 @@ sys.path.insert(0, os.path.abspath('../..'))
 project = 'decodanda'
 copyright = '2023, Lorenzo Posani'
 author = 'Lorenzo Posani'
-release = '0.3.6'
+release = '0.4.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ['sphinx.ext.autodoc', 'sphinx_rtd_theme']
-
+add_module_names = False
 html_theme = "sphinx_rtd_theme"
 
 templates_path = ['_templates']

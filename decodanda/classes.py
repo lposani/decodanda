@@ -1,17 +1,14 @@
 import copy
 from typing import Tuple, Union
-
-import matplotlib.axes
-import numpy as np
 from numpy import ndarray
-
 from .imports import *
-from .utilities import *
-from .visualize import *
+from .utilities import generate_binary_words, string_bool, sample_training_testing_from_rasters, CrossValidator, \
+    log_dichotomy, hamming, sample_from_rasters, generate_dichotomies, semantic_score, z_pval, DictSession, \
+    contiguous_chunking, non_contiguous_mask
+from .visualize import corr_scatter, visualize_decoding, plot_perfs_null_model
 
 
 # Main class
-
 
 class Decodanda:
     def __init__(self,
