@@ -2,7 +2,7 @@
 <hr>
 
 Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") 
-is a best-practices-made-easy Python package for decoding and geometrical analysis of neural data.
+is a best-practices-made-easy Python package for decoding neural data.
 
 Decodanda is designed to expose a user-friendly and flexible interface for population activity decoding, with 
 a series of built-in best practices to avoid the most common pitfalls:

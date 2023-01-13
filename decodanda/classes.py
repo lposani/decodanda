@@ -15,41 +15,169 @@ from .visualize import *
 
 class Decodanda:
     def __init__(self,
-                 data,
-                 conditions,
-                 classifier='svc',
-                 neural_attr='raster',
-                 trial_attr='trial',
-                 min_data_per_condition=2,
-                 min_trials_per_condition=2,
-                 min_activations_per_cell=1,
-                 trial_chunk=None,
-                 exclude_contiguous_chunks=False,
-                 exclude_silent=False,
-                 verbose=False,
-                 zscore=False,
-                 fault_tolerance=False,
-                 debug=False,
+                 data: Union[list, dict],
+                 conditions: dict,
+                 classifier: any = 'svc',
+                 neural_attr: str = 'raster',
+                 trial_attr: str = 'trial',
+                 min_data_per_condition: int = 2,
+                 min_trials_per_condition: int = 2,
+                 min_activations_per_cell: int = 1,
+                 trial_chunk: Optional[int] = None,
+                 exclude_contiguous_chunks: bool = False,
+                 exclude_silent: bool = False,
+                 verbose: bool = False,
+                 zscore: bool = False,
+                 fault_tolerance: bool = False,
+                 debug: bool = False,
                  **kwargs
                  ):
+
         """
-        :param data:
-        :param conditions:
-        :param classifier:
-        :param neural_attr:
-        :param trial_attr:
-        :param min_data_per_condition:
-        :param min_trials_per_condition:
-        :param min_activations_per_cell:
-        :param trial_chunk:
-        :param exclude_contiguous_chunks:
-        :param exclude_silent:
-        :param verbose:
-        :param zscore:
-        :param fault_tolerance:
-        :param debug:
-        :param kwargs:
+        Main class that implements the decoding pipelines with built-in best practices.
+
+        It works by separating the input data into all possible conditions - defined as specific
+        combinations of variable values - and sampling data points from these conditions
+        according to the specific decoding problem.
+
+        Parameters
+        ----------
+        data
+            A dictionary or a list of dictionaries each containing
+            (1) the neural data (2) a set of variables that we want to decode from the neural data
+            (3) a trial number. See the ``Data Structure`` section for more details.
+            If a list is passed, the analyses will be performed on the pseudo-population built by pooling
+            all the data sets in the list.
+
+        conditions
+            A dictionary that specifies which values for which variables of `data` we want to decode.
+            See the ``Data Structure`` section for more details.
+
+        classifier
+            The classifier used for all decoding analyses. Default: ``sklearn.svm.LinearSVC``.
+
+        neural_attr
+            The key under which the neural features are stored in the ``data`` dictionary.
+
+        trial_attr
+            The key under which the trial numbers are stored in the ``data`` dictionary.
+            Each different trial is considered as an independent sample to be used in
+            during cross validation.
+            If ``None``, trials are defined as consecutive bouts of data in time
+            where all the variables have a constant value.
+
+        min_data_per_condition
+            The minimum number of data points per each condition, defined as a specific
+            combination of values of all variables in the ``conditions`` dictionary,
+            that a data set needs to have to be included in the analysis.
+
+        min_trials_per_condition
+            The minimum number of unique trial numbers per each condition, defined as a specific
+            combination of values of all variables in the ``conditions`` dictionary,
+            that a data set needs to have to be included in the analysis.
+
+        min_activations_per_cell
+            The minimum number of non-zero bins that single neurons / features need to have to be
+            included into the analysis.
+
+        trial_chunk
+            Only used when ``trial_attr=None``. The maximum number of consecutive data points
+            within the same bout. Bouts longer than ``trial_chunk`` data points are split into
+            different trials.
+
+        exclude_contiguous_chunks
+            Only used when `trial_attr=None` and `trial_chunks != None`. Discards every second trial
+            that has the same value of all variables as the previous one. It can be useful to avoid
+            decoding temporal artifacts when there are long auto-correlation times in the neural
+            activations.
+
+        exclude_silent
+            If ``True``, all silent population vectors (only zeros) are excluded from the analysis.
+
+        verbose
+            If ``True``, most operations and analysis results are logged in standard output.
+
+        zscore
+            If ``True``, neural features are z-scored before being separated into conditions.
+
+        fault_tolerance
+            If ``True``, the constructor raises a warning instead of an error if no data set
+            passes the inclusion criteria specified by ``min_data_per_condition`` and ``min_trials_per_condition``.
+
+        debug
+            If ``True``, operations are super verbose. Do not use unless you are developing.
+
+
+        Data structure
+        --------------
+        Decodanda works with datasets organized into Python dictionaries.
+        For ``N`` recorded neurons and ``T`` trials (or time bins), the data dictionary must contain:
+
+        1. a ``TxN`` array, under the ``raster`` key
+            This is the set of features we use to decode. Can be continuous (e.g., calcium fluorescence) or discrete (e.g., spikes) values.
+
+        2. a ``Tx1`` array specifying a ``trial`` number
+            This array will define the subdivisions for cross validation: trials (or time bins) that share the
+            same ```trial``` value will always go together in either training or testing samples.
+
+        3. a ``Tx1`` array for each variable we want to decode
+            Each value will be used as a label for the ``raster`` feature. Make sure these arrays are
+            synchronized with the ``raster`` array.
+
+
+        Say we have a data set with N=50 neurons, T=800 time bins divided into 80 trials, where two experimental
+        variables are specified `stimulus`` and ``action``.
+        A properly-formatted data set would look like this:
+
+        >>> data = {
+        >>>     'raster': [[0, 1, ..., 0], ..., [0, 2, ..., 1]],     # <800x50 array>, neural activations
+        >>>     'stimulus': ['A', 'A', 'B', ..., 'B'],               # <800x1 array>, values of the stimulus variable
+        >>>     'action': ['left', 'left', 'none', ..., 'left'],    # <800x1 array>, values of the action variable
+        >>>     'trial':  [1, 1, 1, ..., 2, 2, 2, ..., 80, 80, 80],  # <800x1 array>, trial number, 80 unique numbers
+        >>> }
+
+        The ``conditions`` dictionary is used to specify which variables - out of
+        all the keywords in the ``data`` dictionary, and which and values - out of
+        all possible values of each specified variable - we want to decode.
+
+        It has to be in the form ``{key: [value1, value2]}``:
+
+        >>> conditions = {
+        >>>     'stimulus': ['A', 'B'],
+        >>>     'action': ['left', 'right']
+        >>> }
+
+        If more than one variable is specified, `Decodanda` will balance all
+        conditions during each decoding analysis to disentangle
+        the variables and avoid confounding correlations.
+
+
+        Examples
+        --------
+
+        Using the data set defined above:
+
+        >>> from decodanda import Decodanda
+        >>>
+        >>> dec = Decodanda(
+        >>>         data=data,
+        >>>         conditions=conditions
+        >>>         verbose=True)
+        >>>
+        [Decodanda]	building conditioned rasters for session 0
+                    (stimulus = A, action = left):	Selected 150 time bin out of 800, divided into 15 trials
+                    (stimulus = A, action = right):	Selected 210 time bin out of 800, divided into 21 trials
+                    (stimulus = B, action = left):	Selected 210 time bin out of 800, divided into 21 trials
+                    (stimulus = B, action = right):	Selected 230 time bin out of 800, divided into 23 trials
+
+
+        The constructor divides the data into conditions using the ``stimulus`` and ``action`` values
+        and stores them in the ``self.conditioned_rasters`` object.
+        This condition structure is the basis for all the balanced decoding analyses.
+
         """
+
+
         # casting single session to a list so that it is compatible with all loops below
         if type(data) != list:
             data = [data]
