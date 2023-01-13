@@ -86,7 +86,7 @@ class Decodanda:
             different trials.
 
         exclude_contiguous_chunks
-            Only used when `trial_attr=None` and `trial_chunks != None`. Discards every second trial
+            Only used when ``trial_attr=None`` and ``trial_chunks != None``. Discards every second trial
             that has the same value of all variables as the previous one. It can be useful to avoid
             decoding temporal artifacts when there are long auto-correlation times in the neural
             activations.
@@ -126,7 +126,7 @@ class Decodanda:
 
 
         Say we have a data set with N=50 neurons, T=800 time bins divided into 80 trials, where two experimental
-        variables are specified `stimulus`` and ``action``.
+        variables are specified ``stimulus`` and ``action``.
         A properly-formatted data set would look like this:
 
         >>> data = {
@@ -312,29 +312,6 @@ class Decodanda:
         return performance
 
     def _one_cv_step(self, dic, training_fraction, ndata, shuffled=False, testing_trials=None):
-        """
-
-        Parameters
-        ----------
-        dic : list
-            the dichotomy to be decoded, expressed in a double-list binary format, e.g. ``[['10', '11'], ['01', '00']]``
-        training_fraction
-        ndata
-        shuffled
-        testing_trials
-
-        Returns
-        -------
-
-        """
-        """
-        :param dic: 
-        :param training_fraction: the fraction of trials used for training.
-        :param ndata: the number of population vectors sampled for training and for testing per each condition.
-        :param shuffled: if True, population vectors for each condition are sampled in a shuffled way compatible with a null model.
-        :param testing_trials: if specified, these trials will be used for testing, and the remaining ones for training.
-        :return: performance: decoding performance.
-        """
 
         dic_key = self._dic_key(dic)
         set_A = dic[0]
@@ -548,12 +525,14 @@ class Decodanda:
         return np.asarray(performances)
 
     def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata='auto', only_semantic=True, shuffled=False):
+
         # TODO: make these comments into proper doc
         # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
         # Example: dic = [['10', '11'], ['00', '01']]
         #
         # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
         # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
+
         if type(dichotomy) == str:
             dic = self._dichotomy_from_key(dichotomy)
         else:
@@ -640,8 +619,10 @@ class Decodanda:
         Function that performs cross-validated decoding of a specific dichotomy and compares the resulting values with
         a null model where the relationship between the neural data and the two sides of the dichotomy is
         shuffled.
+
         Decoding is performed by sampling a balanced amount of data points from each condition in each class of the
         dichotomy, so to ensure that only the desired variable is analyzed by balancing confounds.
+
         Before sampling, each condition is individually divided into training and testing bins
         by using the ``self.trial`` array specified in the data structure when constructing the ``Decodanda`` object.
 
@@ -775,6 +756,7 @@ class Decodanda:
         return data_performance, null_model_performances
 
     def CCGP_with_nullmodel(self, dic, ntrials=5, nshuffles=25, ndata='auto', only_semantic=True, return_CV=False):
+
         # TODO: write doc
         performances = self.CCGP_dichotomy(dic, ntrials, ndata, only_semantic=only_semantic)
 
@@ -983,7 +965,40 @@ class Decodanda:
         return ccgp, ccgp_nullmodel
 
     def geometrical_analysis(self, training_fraction=0.75, cross_validations=10, nshuffles=10, ndata='auto',
-                             visualize=True, z_score_res=False):
+                             visualize=True):
+        """
+        This function performs a balanced decoding analysis for each possible dichotomy, and
+        plots the result sorted by a semantic score that tells how close each dichotomy is to
+        any of the specified variables. A semantic dichotomy has ``semantic_score = 1``, the
+        XOR dichotomy has ``semantic_score = 0``.
+
+        Parameters
+        ----------
+        raining_fraction:
+            the fraction of trials used for training in each cross-validation fold.
+        cross_validations:
+            the number of cross-validations.
+        nshuffles:
+            the number of null-model iterations of the decoding procedure.
+        ndata:
+            the number of data points (population vectors) sampled for training and for testing for each condition.
+        visualize:
+            if ``True``, the decoding results are shown in a figure.
+
+
+        Returns
+        -------
+        dichotomies_data:
+            Two lists, one containing all the dichotomies in binary notation
+            and one containing the corresponding semantic score.
+        decoding_data:
+            Two dictionaries, one containing the decoding performances for all dichotomies
+            and one containing all the corresponding lists of null model performances.
+        CCGP_data:
+            Two dictionaries, one containing the CCGP values for all dichotomies
+            and one containing all the corresponding lists of null model values.
+        """
+
         all_dics = generate_dichotomies(self.n_conditions)[1]
         semantic_overlap = []
         dic_name = []
@@ -1090,7 +1105,11 @@ class Decodanda:
                     axs[1].text(i, CCGP_results[i] + 0.08, dic_name[i], rotation=90, fontsize=6, color='k',
                                 ha='center', fontweight='bold')
 
-        return [all_dics, semantic_overlap], [decoding_results, decoding_null], [CCGP_results, CCGP_null]
+        dichotomies_data = [all_dics, semantic_overlap]
+        decoding_data = [decoding_results, decoding_null]
+        CCGP_data = [CCGP_results, CCGP_null]
+
+        return dichotomies_data, decoding_data, CCGP_data
 
     # init utilities
 
@@ -1515,7 +1534,7 @@ def generate_binary_conditions(discrete_dict):
     return conditions
 
 
-class NullmodelIterator(object):  # necessary for parallelization of null model iterations
+class _NullmodelIterator(object):  # necessary for parallelization of null model iterations
     def __init__(self, data, conditions, decodanda_params, analysis_params):
         self.data = data
         self.conditions = conditions
@@ -1603,7 +1622,7 @@ def decoding_analysis(data, conditions, decodanda_params, analysis_params, paral
         # Null
         del an_params['nshuffles']
         pool = Pool()
-        null_performances = pool.map(NullmodelIterator(data, conditions, decodanda_params, an_params),
+        null_performances = pool.map(_NullmodelIterator(data, conditions, decodanda_params, an_params),
                                      range(null_iterations))
         null = {key: np.stack([p[key] for p in null_performances]) for key in null_performances[0].keys()}
     else:

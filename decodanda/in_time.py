@@ -12,8 +12,7 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
     :param time_attr: the variable that defines time from the zero offset.
     :param decodanda_params: dictionary of parameters for the Decodanda constructor.
     :param decoding_params: dictionary of parameters for the Decodanda.decode() function.
-    :param time_boundaries: List [min, max]: only trials with data points spanning the whole time
-    interval will be considered for the decoding analysis.
+    :param time_boundaries: List [min, max]: only trials with data points spanning the whole time interval will be considered for the decoding analysis.
     :return: performances, null
     """
     if type(data) != list:
@@ -89,8 +88,7 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
     :param time_attr: the variable that defines time from the zero offset.
     :param decodanda_params: dictionary of parameters for the Decodanda constructor.
     :param decoding_params: dictionary of parameters for the Decodanda.decode() function.
-    :param time_boundaries: List [min, max]: only trials with data points spanning the whole time
-    interval will be considered for the decoding analysis.
+    :param time_boundaries: List [min, max]: only trials with data points spanning the whole time interval will be considered for the decoding analysis.
     :return: performances, null
 
     """
