@@ -1,5 +1,7 @@
 import copy
 from typing import Tuple, Union
+
+import numpy as np
 from numpy import ndarray
 from .imports import *
 from .utilities import generate_binary_words, string_bool, sample_training_testing_from_rasters, CrossValidator, \
@@ -206,6 +208,7 @@ class Decodanda:
         self._min_activations_per_cell = min_activations_per_cell
         self._verbose = verbose
         self._debug = debug
+        self._zscore = zscore
         self._exclude_silent = exclude_silent
         self._neural_attr = neural_attr
         self._trial_attr = trial_attr
@@ -250,8 +253,8 @@ class Decodanda:
         self._divide_data_into_conditions(data)
         #  \ >>> main part: create conditioned arrays <<< --------------------------------
 
-        if zscore:
-            self._zscore_activity()
+        # if zscore:
+        #     self._zscore_activity()
 
         # raising exceptions
         if self.n_brains == 0:
@@ -369,6 +372,15 @@ class Decodanda:
             selectivity_training = np.nanmean(training_array_A, 0) - np.nanmean(training_array_B, 0)
             selectivity_testing = np.nanmean(testing_array_A, 0) - np.nanmean(testing_array_B, 0)
             corr_scatter(selectivity_training, selectivity_testing, 'Selectivity (training)', 'Selectivity (testing)')
+
+        if self._zscore:
+            big_raster = np.vstack([training_array_A, training_array_B, testing_array_A, testing_array_B])
+            big_mean = np.nanmean(big_raster, 0)
+            big_std = np.nanstd(big_raster, 0)
+            training_array_A = (training_array_A - big_mean)/big_std
+            training_array_B = (training_array_B - big_mean)/big_std
+            testing_array_A = (testing_array_A - big_mean)/big_std
+            testing_array_B = (testing_array_B - big_mean)/big_std
 
         self._train(training_array_A, training_array_B, label_A, label_B)
 
@@ -492,6 +504,7 @@ class Decodanda:
             self._shuffle_conditioned_arrays(dic)
 
         if self._verbose and not shuffled:
+            print(dic, ndata)
             log_dichotomy(self, dic, ndata, 'Decoding')
             count = tqdm(range(cross_validations))
         else:
@@ -521,7 +534,7 @@ class Decodanda:
             self._order_conditioned_rasters()
         return np.asarray(performances)
 
-    def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata='auto', only_semantic=True, shuffled=False):
+    def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata: Optional[int] = None, only_semantic=True, shuffled=False):
 
         # TODO: make these comments into proper doc
         # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
@@ -535,9 +548,9 @@ class Decodanda:
         else:
             dic = dichotomy
 
-        if ndata == 'auto' and self.n_brains == 1:
+        if ndata is None and self.n_brains == 1:
             ndata = self._max_conditioned_data
-        if ndata == 'auto' and self.n_brains > 1:
+        if ndata is None and self.n_brains > 1:
             ndata = max(self._max_conditioned_data, 2 * self.n_neurons)
 
         all_performances = []
@@ -752,7 +765,7 @@ class Decodanda:
 
         return data_performance, null_model_performances
 
-    def CCGP_with_nullmodel(self, dic, ntrials=5, nshuffles=25, ndata='auto', only_semantic=True, return_CV=False):
+    def CCGP_with_nullmodel(self, dic, ntrials=5, nshuffles=25, ndata: Optional[int] = None, only_semantic=True, return_CV=False):
 
         # TODO: write doc
         performances = self.CCGP_dichotomy(dic, ntrials, ndata, only_semantic=only_semantic)
@@ -940,7 +953,7 @@ class Decodanda:
 
         return perfs, perfs_nullmodel
 
-    def CCGP(self, ntrials=5, nshuffles=25, ndata='auto', plot=False, ax=None, only_semantic=True, **kwargs):
+    def CCGP(self, ntrials=5, nshuffles=25, ndata: Optional[int] = None, plot=False, ax=None, only_semantic=True, **kwargs):
         semantic_dics, semantic_keys = self._find_semantic_dichotomies()
         # TODO: definintely write doc
 
@@ -961,7 +974,11 @@ class Decodanda:
 
         return ccgp, ccgp_nullmodel
 
-    def geometrical_analysis(self, training_fraction=0.75, cross_validations=10, nshuffles=10, ndata='auto',
+    def geometrical_analysis(self,
+                             training_fraction: float = 0.75,
+                             cross_validations: int = 10,
+                             nshuffles: int = 10,
+                             ndata: Optional[int] = None,
                              visualize=True):
         """
         This function performs a balanced decoding analysis for each possible dichotomy, and
@@ -971,7 +988,7 @@ class Decodanda:
 
         Parameters
         ----------
-        raining_fraction:
+        training_fraction:
             the fraction of trials used for training in each cross-validation fold.
         cross_validations:
             the number of cross-validations.
@@ -1029,6 +1046,7 @@ class Decodanda:
         CCGP_results = []
         CCGP_null = []
         for i, dic in enumerate(all_dics):
+            print(dic)
             res, null = self.CCGP_with_nullmodel(dic,
                                                  ntrials=cross_validations,
                                                  nshuffles=nshuffles,

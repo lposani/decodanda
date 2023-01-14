@@ -1,6 +1,20 @@
 import numpy as np
+from decodanda import Decodanda, generate_synthetic_data
+from decodanda.utilities import z_pval
+
+
+
+import numpy as np
 import matplotlib.pyplot as plt
 from decodanda import Decodanda, FakeSession
+
+data = generate_synthetic_data(n_neurons=80, n_trials=100, rateB=0.3, rateA=0.3, keyA='stimulus', keyB='action')
+dec = Decodanda(
+        data=data,
+        conditions={'action': [-1, 1], 'stimulus': [-1, 1]},
+        zscore=True,
+        verbose=True)
+dec.geometrical_analysis()
 
 # We create a synthetic data set where neurons respond to two variables, labeled as
 #  - behaviour_letter (taking values A, B)
