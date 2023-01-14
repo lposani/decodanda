@@ -22,7 +22,7 @@ Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master
 - [multi-variable decoding](https://github.com/lposani/decodanda/blob/master/notebooks/disentangling_confounds.ipynb) (disentangling correlated variables)
 - [pseudo-population decoding](https://github.com/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb) (pooling neurons from multiple data sets)
 - [decoding in time](https://github.com/lposani/decodanda/blob/master/notebooks/decoding_in_time.ipynb)
-- [CCGP and geometrical analysis](https://github.com/lposani/decodanda/blob/notebooks/master/geometry.ipynb)
+- [CCGP and geometrical analysis](https://github.com/lposani/decodanda/blob/notebooks/master/CCGP.ipynb)
 
 For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
