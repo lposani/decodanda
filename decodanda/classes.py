@@ -377,6 +377,7 @@ class Decodanda:
             big_raster = np.vstack([training_array_A, training_array_B, testing_array_A, testing_array_B])
             big_mean = np.nanmean(big_raster, 0)
             big_std = np.nanstd(big_raster, 0)
+            big_std[big_std == 0] = np.inf
             training_array_A = (training_array_A - big_mean)/big_std
             training_array_B = (training_array_B - big_mean)/big_std
             testing_array_A = (testing_array_A - big_mean)/big_std
