@@ -1178,6 +1178,11 @@ class Decodanda:
                 # chunk: used for cross-validation sampling
                 # trial: used for null model, changing labels between trials
                 # if trial_chunk_size is specified, chunk and trial are different objects.
+                def condition_no(cond):
+                    no = 0
+                    for i in range(len(cond)):
+                        no += cond[i]*10**(i+2)
+                    return no
 
                 if self._trial_attr is not None:
                     conditioned_trial = getattr(session, self._trial_attr)[mask]
@@ -1185,8 +1190,10 @@ class Decodanda:
                     if self._verbose:
                         print('[Decodanda]\tUsing contiguous chunks of the same labels as trials.')
                     conditioned_trial = contiguous_chunking(mask)[mask]
+                    conditioned_trial += condition_no(condition_vec)
                 else:
                     conditioned_trial = contiguous_chunking(mask, self._trial_chunk)[mask]
+                    conditioned_trial += condition_no(condition_vec)
 
                 if self._exclude_contiguous_trials:
                     contiguous_chunks = contiguous_chunking(mask)[mask]
