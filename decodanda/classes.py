@@ -311,9 +311,10 @@ class Decodanda:
         performance = self.classifier.score(testing_raster, testing_labels)
         return performance
 
-    def _one_cv_step(self, dic, training_fraction, ndata, shuffled=False, testing_trials=None):
+    def _one_cv_step(self, dic, training_fraction, ndata, shuffled=False, testing_trials=None, dic_key=None):
+        if dic_key is None:
+            dic_key = self._dic_key(dic)
 
-        dic_key = self._dic_key(dic)
         set_A = dic[0]
         label_A = ''
         for d in set_A:
@@ -401,7 +402,8 @@ class Decodanda:
     def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,
                          cross_validations: int = 10, ndata: Optional[int] = None,
                          shuffled: bool = False, parallel: bool = False,
-                         testing_trials: Optional[list] = None, **kwargs) -> ndarray:
+                         testing_trials: Optional[list] = None,
+                         dic_key: Optional[str] = None, **kwargs) -> ndarray:
         """
         Function that performs cross-validated decoding of a specific dichotomy.
         Decoding is performed by sampling a balanced amount of data points from each condition in each class of the
@@ -427,6 +429,8 @@ class Decodanda:
                 if True, each cross-validation is performed by a dedicated thread (experimental, use with caution).
             testing_trials:
                 if specified, data sampled from the specified trial numbers will be used for testing, and the remaining ones for training.
+            dic_key:
+                if specified, weights of the decoding analysis will be saved in self.decoding_weights using dic_key as the dictionary key.
 
         Returns
         -------
@@ -485,13 +489,6 @@ class Decodanda:
 
         """
 
-        # TODO: make these comments into proper doc
-        # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
-        # Example: dic = [['10', '11'], ['00', '01']]
-        #
-        # Decoding works by sampling a balanced amount of patterns from each condition in each class of the dichotomy
-        # Each condition is individually divided into training and testing bins
-
         if type(dichotomy) == str:
             dic = self._dichotomy_from_key(dichotomy)
         else:
@@ -529,13 +526,13 @@ class Decodanda:
                 print('\nLooping over decoding cross validation folds:')
             for i in count:
                 performances[i] = self._one_cv_step(dic=dic, training_fraction=training_fraction, ndata=ndata,
-                                                    shuffled=shuffled, testing_trials=testing_trials)
+                                                    shuffled=shuffled, testing_trials=testing_trials, dic_key=dic_key)
 
         if shuffled:
             self._order_conditioned_rasters()
         return np.asarray(performances)
 
-    def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata: Optional[int] = None, only_semantic=True, shuffled=False):
+    def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata: Optional[int] = None, max_semantic_dist=1, shuffled=False):
 
         # TODO: make these comments into proper doc
         # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
@@ -559,6 +556,8 @@ class Decodanda:
         if not shuffled and self._verbose:
             log_dichotomy(self, dic, ndata, 'Cross-condition decoding')
             iterable = tqdm(range(resamplings))
+        elif not shuffled:
+            iterable = range(resamplings)
         else:
             iterable = range(1)
 
@@ -572,12 +571,8 @@ class Decodanda:
                 for j in range(len(set_B)):
                     test_condition_A = set_A[i]
                     test_condition_B = set_B[j]
-                    # TODO: do we need the only_semantic keyword?
-                    if only_semantic:
-                        go = (hamming(string_bool(test_condition_A), string_bool(test_condition_B)) == 1)
-                    else:
-                        go = True
-                    if go:
+
+                    if hamming(string_bool(test_condition_A), string_bool(test_condition_B)) <= max_semantic_dist:
                         training_conditions_A = [x for iA, x in enumerate(set_A) if iA != i]
                         training_conditions_B = [x for iB, x in enumerate(set_B) if iB != j]
 
@@ -614,8 +609,8 @@ class Decodanda:
                         performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
                         performances.append(performance)
 
-            all_performances.append(np.nanmean(performances))
-        return all_performances
+            all_performances.append(performances)
+        return np.nanmean(all_performances, 0)
 
     def decode_with_nullmodel(self, dichotomy: Union[str, list],
                               training_fraction: float,
@@ -766,12 +761,12 @@ class Decodanda:
 
         return data_performance, null_model_performances
 
-    def CCGP_with_nullmodel(self, dic, ntrials=5, nshuffles=25, ndata: Optional[int] = None, only_semantic=True, return_CV=False):
+    def CCGP_with_nullmodel(self, dichotomy, resamplings=5, nshuffles=25, ndata: Optional[int] = None, max_semantic_dist=1, return_combinations=False):
 
         # TODO: write doc
-        performances = self.CCGP_dichotomy(dic, ntrials, ndata, only_semantic=only_semantic)
+        performances = self.CCGP_dichotomy(dichotomy=dichotomy, resamplings=resamplings, ndata=ndata, max_semantic_dist=max_semantic_dist)
 
-        if return_CV:
+        if return_combinations:
             ccgp = performances
         else:
             ccgp = np.nanmean(performances)
@@ -782,23 +777,25 @@ class Decodanda:
         else:
             count = range(nshuffles)
 
-        if return_CV:
-            shuffled_ccgp = np.zeros((nshuffles, ntrials))
-        else:
-            shuffled_ccgp = np.zeros(nshuffles)
-
+        shuffled_ccgp = []
         for n in count:
-            performances = self.CCGP_dichotomy(dic, 1, ndata, only_semantic, shuffled=True)
-            if return_CV:
-                shuffled_ccgp[n] = performances
+            performances = self.CCGP_dichotomy(dichotomy=dichotomy,
+                                               resamplings=resamplings,
+                                               ndata=ndata,
+                                               max_semantic_dist=max_semantic_dist,
+                                               shuffled=True)
+            if return_combinations:
+                shuffled_ccgp.append(performances)
             else:
-                shuffled_ccgp[n] = np.nanmean(performances)
+                shuffled_ccgp.append(np.nanmean(performances))
 
         return ccgp, shuffled_ccgp
 
     # Analysis functions for semantic dichotomies
 
-    def decode(self, training_fraction: float, cross_validations: int = 10, nshuffles: int = 10,
+    def decode(self, training_fraction: float,
+               cross_validations: int = 10,
+               nshuffles: int = 10,
                ndata: Optional[int] = None,
                parallel: bool = False,
                non_semantic: bool = False,
@@ -914,9 +911,6 @@ class Decodanda:
             perfs[key] = performance
             perfs_nullmodel[key] = null_model_performances
 
-        # TODO: maybe create another function that decodes all non-semantic dychotomies instead of adding XOR here?
-        # TODO: or a keyword that decodes all non-semantic as well? And XOR becomes the key for dim=2
-
         if non_semantic and len(self.conditions) == 2:
             xor_dic = [['01', '10'], ['00', '11']]
             perfs_xor, perfs_null_xor = self.decode_with_nullmodel(dichotomy=xor_dic,
@@ -954,17 +948,26 @@ class Decodanda:
 
         return perfs, perfs_nullmodel
 
-    def CCGP(self, ntrials=5, nshuffles=25, ndata: Optional[int] = None, plot=False, ax=None, only_semantic=True, **kwargs):
+    def CCGP(self, resamplings=5,
+             nshuffles: int = 25,
+             ndata: Optional[int] = None,
+             plot: bool = False,
+             ax: Optional[plt.Axes] = None,
+             max_semantic_dist: int = 1,
+             **kwargs):
+
         semantic_dics, semantic_keys = self._find_semantic_dichotomies()
-        # TODO: definintely write doc
 
         ccgp = {}
         ccgp_nullmodel = {}
         for key, dic in zip(semantic_keys, semantic_dics):
             if self._verbose:
                 print("\nTesting CCGP for semantic dichotomy: ", key)
-            data_ccgp, null_ccgps = self.CCGP_with_nullmodel(dic, ntrials, nshuffles, ndata,
-                                                             only_semantic=only_semantic)
+            data_ccgp, null_ccgps = self.CCGP_with_nullmodel(dichotomy=dic,
+                                                             resamplings=resamplings,
+                                                             nshuffles=nshuffles,
+                                                             ndata=ndata,
+                                                             max_semantic_dist=max_semantic_dist)
             ccgp[key] = data_ccgp
             ccgp_nullmodel[key] = null_ccgps
 
@@ -1173,11 +1176,7 @@ class Decodanda:
                 # select bins conditioned on the semantic behavioural vector
                 conditioned_raster = array[mask, :]
 
-                # TODO: fix this nonsense
-                # Define trial logic ---
-                # chunk: used for cross-validation sampling
-                # trial: used for null model, changing labels between trials
-                # if trial_chunk_size is specified, chunk and trial are different objects.
+                # Define trial logic
                 def condition_no(cond):
                     no = 0
                     for i in range(len(cond)):
