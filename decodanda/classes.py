@@ -328,10 +328,14 @@ class Decodanda:
         testing_array_A = []
         testing_array_B = []
 
+        # allow for unbalanced dichotomies
+        n_conditions_A = float(len(dic[0]))
+        n_conditions_B = float(len(dic[1]))
+        fraction = n_conditions_A/n_conditions_B
+
         for d in set_A:
-            # TODO: make this function private
             training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
-                                                                     ndata,
+                                                                     int(ndata/fraction),
                                                                      training_fraction,
                                                                      self.conditioned_trial_index[d],
                                                                      debug=self._debug,
@@ -347,7 +351,7 @@ class Decodanda:
 
         for d in set_B:
             training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
-                                                                     ndata,
+                                                                     int(ndata),
                                                                      training_fraction,
                                                                      self.conditioned_trial_index[d],
                                                                      debug=self._debug,
@@ -1409,25 +1413,26 @@ class Decodanda:
         else:
             for n in range(self.n_brains):
                 # select conditioned rasters
-                all_conditions = list(self._semantic_vectors.keys())
-                all_data = np.vstack([self.conditioned_rasters[cond][n] for cond in all_conditions])
-                all_trials = np.hstack([self.conditioned_trial_index[cond][n] for cond in all_conditions])
-                all_n_trials = {cond: len(np.unique(self.conditioned_trial_index[cond][n])) for cond in all_conditions}
+                for iteration in range(10):
+                    all_conditions = list(self._semantic_vectors.keys())
+                    all_data = np.vstack([self.conditioned_rasters[cond][n] for cond in all_conditions])
+                    all_trials = np.hstack([self.conditioned_trial_index[cond][n] for cond in all_conditions])
+                    all_n_trials = {cond: len(np.unique(self.conditioned_trial_index[cond][n])) for cond in all_conditions}
 
-                unique_trials = np.unique(all_trials)
-                np.random.shuffle(unique_trials)
+                    unique_trials = np.unique(all_trials)
+                    np.random.shuffle(unique_trials)
 
-                i = 0
-                for cond in all_conditions:
-                    cond_trials = unique_trials[i:i + all_n_trials[cond]]
-                    new_cond_array = []
-                    new_cond_trial = []
-                    for trial in cond_trials:
-                        new_cond_array.append(all_data[all_trials == trial])
-                        new_cond_trial.append(all_trials[all_trials == trial])
-                    self.conditioned_rasters[cond][n] = np.vstack(new_cond_array)
-                    self.conditioned_trial_index[cond][n] = np.hstack(new_cond_trial)
-                    i += all_n_trials[cond]
+                    i = 0
+                    for cond in all_conditions:
+                        cond_trials = unique_trials[i:i + all_n_trials[cond]]
+                        new_cond_array = []
+                        new_cond_trial = []
+                        for trial in cond_trials:
+                            new_cond_array.append(all_data[all_trials == trial])
+                            new_cond_trial.append(all_trials[all_trials == trial])
+                        self.conditioned_rasters[cond][n] = np.vstack(new_cond_array)
+                        self.conditioned_trial_index[cond][n] = np.hstack(new_cond_trial)
+                        i += all_n_trials[cond]
 
         if not self._check_trial_availability():  # if the trial distribution is not cross validatable, redo the shuffling
             print("Note: re-shuffling arrays")
