@@ -231,12 +231,8 @@ class Decodanda:
         self._generate_semantic_vectors()
 
         # decoding weights
-        if self.n_conditions == 2:
-            self.decoding_weights = {key: [] for key in self._semantic_keys + ['XOR']}
-            self.decoding_weights_null = {key: [] for key in self._semantic_keys + ['XOR']}
-        else:
-            self.decoding_weights = {key: [] for key in self._semantic_keys}
-            self.decoding_weights_null = {key: [] for key in self._semantic_keys}
+        self.decoding_weights = {}
+        self.decoding_weights_null = {}
 
         # creating conditioned array with the following structure:
         #   define a condition_vector with boolean values for each semantic condition, es. 100
@@ -388,9 +384,12 @@ class Decodanda:
 
         if hasattr(self.classifier, 'coef_'):
             if dic_key and not shuffled:
+                if dic_key not in self.decoding_weights.keys():
+                    self.decoding_weights[dic_key] = []
                 self.decoding_weights[dic_key].append(self.classifier.coef_)
             if dic_key and shuffled:
-                # self.decoding_weights_null[dic_key][-1].append(self.classifier.coef_)
+                if dic_key not in self.decoding_weights_null.keys():
+                    self.decoding_weights_null[dic_key] = []
                 self.decoding_weights_null[dic_key].append(self.classifier.coef_)
 
         performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
@@ -620,7 +619,8 @@ class Decodanda:
                               parallel: bool = False,
                               return_CV: bool = False,
                               testing_trials: Optional[list] = None,
-                              plot: bool = False) -> Tuple[Union[list, ndarray], ndarray]:
+                              plot: bool = False,
+                              dic_key: Optional[str] = None) -> Tuple[Union[list, ndarray], ndarray]:
         """
         Function that performs cross-validated decoding of a specific dichotomy and compares the resulting values with
         a null model where the relationship between the neural data and the two sides of the dichotomy is
@@ -653,6 +653,8 @@ class Decodanda:
                 if specified, data sampled from the specified trial numbers will be used for testing, and the remaining ones for training.
             plot:
                 if True, a visualization of the decoding results is shown.
+            dic_key:
+                if specified, weights of the decoding analysis will be saved in self.decoding_weights using dic_key as the dictionary key.
 
 
         Returns
@@ -729,7 +731,8 @@ class Decodanda:
                                                cross_validations=cross_validations,
                                                ndata=ndata,
                                                parallel=parallel,
-                                               testing_trials=testing_trials)
+                                               testing_trials=testing_trials,
+                                               dic_key=dic_key)
         if return_CV:
             data_performance = d_performances
         else:
@@ -1269,6 +1272,18 @@ class Decodanda:
                 nonsemantic_dics.append(dic)
         return nonsemantic_dics
 
+    def _powerchotomies(self):
+        conditions = list(self._semantic_vectors.keys())
+        powerset = list(chain.from_iterable(combinations(conditions, r) for r in range(1, len(conditions))))
+        dichotomies = {}
+        for i in range(len(powerset)):
+            for j in range(i+1, len(powerset)):
+                if len(np.unique(powerset[i] + powerset[j])) == len(conditions):
+                    if len(powerset[i] + powerset[j]) == len(conditions):
+                        dic = [list(powerset[i]), list(powerset[j])]
+                        dichotomies[_powerchotomy_to_key(dic)] = dic
+        return dichotomies
+
     def _dic_key(self, dic):
         if len(dic[0]) == 2 ** (self.n_conditions - 1) and len(dic[1]) == 2 ** (self.n_conditions - 1):
             for i in range(len(dic)):
@@ -1625,6 +1640,10 @@ def _generate_binary_conditions(discrete_dict):
             '%s' % discrete_dict[key][1]: lambda d, k=key: getattr(d, k) == discrete_dict[k][1],
         }
     return conditions
+
+
+def _powerchotomy_to_key(dic):
+    return '_'.join(dic[0])+'_v_'+'_'.join(dic[1])
 
 
 class _NullmodelIterator(object):  # necessary for parallelization of null model iterations
