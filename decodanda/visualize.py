@@ -156,7 +156,7 @@ def plot_perfs_null_model_single(data, null, x=0, marker='d', ax=None, shownull=
         ax.errorbar([x], np.nanmean(null), yerr=2 * np.nanstd(null), color='k',
                     linewidth=2, capsize=5, marker='_', alpha=0.3)
         z, pval = z_pval(data, null)
-        print('Z = ', z, 'P = ', pval)
+        # print('Z = ', z, 'P = ', pval)
 
     ax.scatter([x], [data], marker=marker, s=100, color=color, facecolor='white', linewidth=2)
 

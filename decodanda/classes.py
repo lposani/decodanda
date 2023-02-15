@@ -762,6 +762,7 @@ class Decodanda:
                                                  shuffled=True)
 
             null_model_performances[n] = np.nanmean(performances)
+
         if plot:
             visualize_decoding(self, dic, d_performances, null_model_performances,
                                training_fraction=training_fraction, ndata=ndata, testing_trials=testing_trials)
