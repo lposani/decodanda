@@ -536,13 +536,78 @@ class Decodanda:
         return np.asarray(performances)
 
     def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata: Optional[int] = None, max_semantic_dist=1, shuffled=False):
+        """
+        Function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
+        for a given variable, specified through its corresponding dichotomy. This function tests how well a given
+        coding strategy for the given variable generalizes when the other variables are changed.
 
-        # TODO: make these comments into proper doc
-        # dic is in the form of a 2xL list, where L is the number of condition vectors in a dichtomy
-        # Example: dic = [['10', '11'], ['00', '01']]
-        #
-        # CCGP analysis works by choosing one condition vector from each class of the dichotomies, train over
-        # the remaining L-1 vs L-1, and use the two selected condition vectors for testing
+
+        Parameters
+        ----------
+            dichotomy : str || list
+                The dichotomy corresponding to the variable to be tested, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']], or as a variable name.
+            resamplings:
+                The number of iterations for each decoding analysis. The returned performance value is the average over these resamplings.
+            ndata:
+                The number of data points (population vectors) sampled for training and for testing for each condition.
+            max_semantic_dist:
+                The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+            shuffled:
+                If True, the data is sampled according to geometrical null model for CCGP that keeps variables decodable but breaks the generalization. See Bernardi et al 2020 & Boyle, Posani et al. 2023.
+
+        Returns
+        -------
+            performances: list of performance values for each cross-condition training-testing split.
+
+        Note
+        ----
+
+        This function trains the ``self._classifier`` to decode the given variable in a sub-set
+        of conditions, and tests it on the held-out set.
+
+        The split of training and testing conditions is decided by the ``max_semantic_dist`` parameter: if set to 1,
+        only pairs of conditions that have all variables in common except the specified one are held out to test the
+        classifier.
+
+
+            For example, if the data set has two variables
+        ``stimulus`` :math:`\\in` {-1, 1} and ``action`` :math:`\\in` {-1, 1}, to compute CCGP for ``stimulus``
+        with ``max_semantic_dist=1`` this function will train the classifier on
+
+        ``(stimulus = -1, action = -1)`` vs. ``(stimulus = 1, action = -1)``
+
+        And test it on
+
+        ``(stimulus = -1, action = 1)`` vs. ``(stimulus = 1, action = 1)``
+
+        note that action is kept fixed within the training and testing conditions.
+
+        If instead we use ``max_semantic_dist=2``, all possible combinations are used, including training on
+
+        ``(stimulus = -1, action = -1)`` vs. ``(stimulus = 1, action = 1)``
+
+        and testing on
+
+        ``(stimulus = -1, action = 1)`` vs. ``(stimulus = 1, action = -1)``
+
+
+                ``dichotomy`` can be passed as a string or as a list.
+        If a string is passed, it has to be a name of one of the variables specified in the conditions dictionary.
+
+        If a list is passed, it needs to contain two lists in the shape [[...], [...]].
+        Each sub list contains the conditions used to define one of the two decoded classes
+        in binary notation.
+
+        For example, if the data set has two variables
+        ``stimulus`` :math:`\\in` {-1, 1} and ``action`` :math:`\\in` {-1, 1}, the condition
+        ``stimulus=-1`` & ``action=-1`` will correspond to the binary notation ``'00'``,
+        the condition ``stimulus=+1`` & ``action=-1`` will correspond to ``10`` and so on.
+
+        Therefore, if ``stimulus`` is the first variable in the conditions dictionary, its corresponding dichotomy is
+
+        >>> stimulus = [['00', '01'], ['10', '11']]
+
+        """
 
         if type(dichotomy) == str:
             dic = self._dichotomy_from_key(dichotomy)
