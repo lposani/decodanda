@@ -1034,7 +1034,6 @@ class Decodanda:
              ndata: Optional[int] = None,
              plot: bool = False,
              ax: Optional[plt.Axes] = None,
-             max_semantic_dist: int = 1,
              **kwargs):
 
         semantic_dics, semantic_keys = self._find_semantic_dichotomies()
@@ -1048,7 +1047,7 @@ class Decodanda:
                                                              resamplings=resamplings,
                                                              nshuffles=nshuffles,
                                                              ndata=ndata,
-                                                             max_semantic_dist=max_semantic_dist)
+                                                             max_semantic_dist=1)
             ccgp[key] = data_ccgp
             ccgp_nullmodel[key] = null_ccgps
 
@@ -1133,10 +1132,9 @@ class Decodanda:
         for i, dic in enumerate(all_dics):
             print(dic)
             res, null = self.CCGP_with_nullmodel(dic,
-                                                 ntrials=cross_validations,
                                                  nshuffles=nshuffles,
                                                  ndata=ndata,
-                                                 only_semantic=False)
+                                                 max_semantic_dist=self.n_conditions)
             print(i, res)
             CCGP_results.append(res)
             CCGP_null.append(null)
