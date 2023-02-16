@@ -607,6 +607,14 @@ class Decodanda:
 
         >>> stimulus = [['00', '01'], ['10', '11']]
 
+        Example
+        -------
+        >>> data = generate_synthetic_data(keyA='stimulus', keyB='action')
+        >>> dec = Decodanda(data=data, conditions={'stimulus': [-1, 1], 'action': [-1, 1]})
+        >>> perfs = dec.CCGP_dichotomy('stimulus')
+        >>> perfs
+        [0.82, 0.87] # 2 values
+
         """
 
         if type(dichotomy) == str:

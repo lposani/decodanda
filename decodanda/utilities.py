@@ -889,7 +889,7 @@ def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False,
 # Synthetic data
 
 
-def generate_synthetic_data(n_neurons=50, n_trials=10, timebins_per_trial=10, keyA='stimulus', keyB='action',
+def generate_synthetic_data(n_neurons=50, n_trials=50, timebins_per_trial=5, keyA='stimulus', keyB='action',
                            rateA=0.1, rateB=0.1, corrAB=0, scale=1, meanfr=0.1, mixing_factor=0., mixed_term=0.):
 
     session = {}
