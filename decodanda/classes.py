@@ -1348,6 +1348,34 @@ class Decodanda:
                 nonsemantic_dics.append(dic)
         return nonsemantic_dics
 
+    def all_dichotomies(self, balanced=True):
+        if balanced:
+            dichotomies = {}
+            sem, keys = self._find_semantic_dichotomies()
+            nsem = self._find_nonsemantic_dichotomies()
+            if self.n_conditions == 2:
+                dichotomies[keys[0]] = sem[0]
+                dichotomies[keys[1]] = sem[1]
+                dichotomies['XOR'] = nsem[0]
+            else:
+                for i in range(len(sem)):
+                    dichotomies[keys[i]] = sem[i]
+                for dic in nsem:
+                    dichotomies[_powerchotomy_to_key(dic)] = dic
+        else:
+            powerchotomies = self._powerchotomies()
+            dichotomies = {}
+            for dk in powerchotomies:
+                k = self._dic_key(powerchotomies[dk])
+                if k:
+                    dichotomies[k] = powerchotomies[dk]
+                else:
+                    dichotomies[dk] = powerchotomies[dk]
+            if self.n_conditions == 2:
+                dichotomies['XOR'] = dichotomies['00_11_v_01_10']
+                del dichotomies['00_11_v_01_10']
+        return dichotomies
+
     def _powerchotomies(self):
         conditions = list(self._semantic_vectors.keys())
         powerset = list(chain.from_iterable(combinations(conditions, r) for r in range(1, len(conditions))))

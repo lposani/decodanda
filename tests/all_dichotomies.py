@@ -40,40 +40,10 @@ def teat_all_dichotomies():
     sns.despine(f)
     ax.set_ylabel('Decoding Performance')
     ax.set_xlabel('Dichotomy')
-    ax.set_title('High-D Geometry')
+    ax.set_title('Low-D Geometry')
     f.savefig('./all_dichotomies_lowd.pdf')
     assert np.max(pvals[:-1]) < 0.05, "All non-XOR dichotomies should be decodable in a Low-D geometry."
     assert pvals[-1] > 0.05, "XOR should not be decodable in a low-D geometry."
-
-    # Testing all individual dichotomies - high dimensional representations
-    data = generate_synthetic_data(n_neurons=80, n_trials=100, rateB=0.3, rateA=0.3, keyA='stimulus',
-                                   keyB='action', mixed_term=0.5)
-
-    d = Decodanda(data=data, conditions={'action': [-1, 1], 'stimulus': [-1, 1]}, verbose=False)
-    # Testing all individual dichotomies - low dimensional representations
-    pvals = []
-    powerchotomies = d._powerchotomies()
-
-    x = 0
-    f, ax = plt.subplots(figsize=(6, 4))
-    for key in tqdm(list(powerchotomies.keys())):
-        res, null = d.decode_with_nullmodel(powerchotomies[key],
-                                            training_fraction=0.9,
-                                            ndata=100,
-                                            dic_key=key,
-                                            cross_validations=20,
-                                            nshuffles=20)
-        pvals.append(z_pval(res, null)[1])
-        plot_perfs_null_model_single(res, null, x=x, ax=ax, marker='o', color='k')
-        x += 1
-    ax.set_xticks(np.arange(len(powerchotomies)))
-    ax.set_xticklabels(list(powerchotomies.keys()), rotation=60)
-    sns.despine(f)
-    ax.set_ylabel('Decoding Performance')
-    ax.set_xlabel('Dichotomy')
-    ax.set_title('High-D Geometry')
-    f.savefig('./all_dichotomies_highd.pdf')
-    assert np.max(pvals) < 0.05, "All dichotomies should be decodable in a high-D geometry."
 
 
 if __name__ == "__main__":

@@ -1177,79 +1177,67 @@ def CCGP_dichotomy_old(self, dichotomy, ntrials=3, ndata='auto', only_semantic=T
 
 # Visualization
 
-def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null=None, names=None, axs=None):
-    # performance and CCGP
 
-    mpl.rcParams.update({'figure.autolayout': False})
+def plot_perfs(perfs_in, labels=None, x=0, ax=None, color=None, marker='o', alpha=0.8, s=50, errorbar=True,
+               annotate=True,
+               null=0.5, labelfontsize=9, linepadding=None, ptype='t', null_data=None):
+    perfs = np.asarray(perfs_in)
+    if null_data is not None:
+        null_means = np.nanmean(null_data, 1)
 
-    cos_dis = mahalanobis_dissimilarity(dec)
-    # cos_dis = cosyne_dissimilarity(np.vstack([r for r in self.centroids.values()]))
-    embedding = MDS(n_components=dim, dissimilarity='precomputed')
-    components = embedding.fit_transform(cos_dis)
-
-    if names is None:
-        names = list(dec._semantic_vectors.keys())
-
-    if data is not None and null is not None:
-        if axs is None:
-            fig = plt.figure(figsize=(12, 5))
-            G = GridSpec(12, 12)
-            ax = fig.add_subplot(G[:, 0:6], projection='3d')
-            ax_dec = fig.add_subplot(G[1:9, 6:9])
-            ax_ccgp = fig.add_subplot(G[1:9, 10:])
-        else:
-            ax = axs[0]
-            ax_dec = axs[1]
-            ax_ccgp = axs[2]
-            fig = ax.get_figure()
-
-        ax_dec.set_title(title)
-
-        plot_perfs_null_model(data['Decoding'], null['Decoding'], ax=ax_dec,
-                              shownull='violin')
-        plot_perfs_null_model(data['CCGP'], null['CCGP'], ax=ax_ccgp,
-                              shownull='violin', ylabel='CCGP', marker='x')
+    if not ax:
+        f, ax = plt.subplots()
+    if not color:
+        ax.scatter(np.ones(len(perfs)) * x, perfs, s=s, alpha=alpha, marker=marker)
     else:
-        if axs is None:
-            fig = plt.figure(figsize=(6, 5))
-            ax = fig.add_subplot(projection='3d')
-        else:
-            ax = axs
-            fig = ax.get_figure()
+        ax.scatter(np.ones(len(perfs)) * x, perfs, s=s, alpha=alpha, marker=marker, facecolor='w', edgecolors=color)
 
-    ax.grid(False)
-    ax.set_axis_off()
-    plt.subplots_adjust(left=0, right=0.95, top=1, bottom=0)
+    if errorbar:
+        ax.errorbar([x], np.nanmean(perfs), 2 * np.nanstd(perfs), color='k', linewidth=1, capsize=6,
+                    marker='_', alpha=0.5)
 
-    def init():
-        for i in range(len(names)):
-            ax.scatter(components[i, 0], components[i, 1], components[i, 2], alpha=0.7, marker='$%s$' % names[i],
-                       s=400)
-        for i in range(len(names)):
-            for j in range(i + 1, len(names)):
-                if hamming_distance(names[i], names[j]) == 1:
-                    ax.plot([components[i][0], components[j][0]], [components[i][1], components[j][1]],
-                            [components[i][2], components[j][2]], linestyle='-', linewidth=2, color='k', alpha=0.7)
-                elif hamming_distance(names[i], names[j]) == 2:
-                    ax.plot([components[i][0], components[j][0]], [components[i][1], components[j][1]],
-                            [components[i][2], components[j][2]], linestyle='--', color='k', alpha=0.3)
-        equalize_ax(ax)
+    if annotate:
+        nonnan = np.isnan(perfs) == 0
+        if ptype == 't':
+            t, pval = ttest_1samp(perfs[nonnan], null)
+        if ptype == 'paired_w':
+            t, pval = wilcoxon(perfs[nonnan], null_means[nonnan])
+        if ptype == 'paired_t':
+            t, pval = ttest_rel(perfs[nonnan], null_means[nonnan])
+        if ptype == 'ttest_z':
+            zs = [(perfs[i] - np.nanmean(null_data[i])) / np.nanstd(null_data[i]) for i in range(len(perfs))]
+            t, pval = ttest_1samp(zs, 0)
+        if ptype == 'multi_z':
+            zs = [(perfs[i] - np.nanmean(null_data[i])) / np.nanstd(null_data[i]) for i in range(len(perfs))]
+            pval = scipy.stats.norm.sf(np.abs(np.nanmean(zs)))
+            t = np.nan
 
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_zticklabels([])
-        return fig,
+        if linepadding is None:
+            if np.nanmean(perfs) > null:
+                linepadding = 0.01
+            else:
+                linepadding = -0.01
 
-    def animate(i):
-        ax.view_init(elev=10., azim=i * 2)
-        return fig,
+        ax.plot([x - 0.15, x - 0.15, x - 0.12], [null + linepadding, np.nanmean(perfs), np.nanmean(perfs)], color='k',
+                alpha=0.5, linewidth=0.5)
+        ax.text(x - 0.14, 0.5 * (np.nanmean(perfs) + null), p_to_ast(pval), rotation=90, ha='right', va='center',
+                fontsize=14)
 
-    if savename:
-        anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=360, interval=20, blit=True)
-        mywriter = animation.PillowWriter(fps=30)
-        anim.save(savename, writer=mywriter)
-    else:
-        init()
-    mpl.rcParams.update({'figure.autolayout': True})
-    return fig
+    if labels is not None:
+        for i in range(len(perfs)):
+            ax.text(x + 0.05, perfs[i], labels[i], fontsize=labelfontsize)
+
+
+
+def corr_scat_kde(x, y, ax=None, xlabel=None, ylabel=None, **kwargs):
+    ax = ax or plt.gca()
+    sns.scatterplot(x, y, ax=ax, **kwargs)
+    sns.kdeplot(x, y, ax=ax, kind='kde', alpha=0.7)
+    corrfunc(x, y, ax=ax)
+    sns.despine(ax=ax)
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    return ax
+

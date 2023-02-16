@@ -1,25 +1,88 @@
-import numpy as np
-
 from .imports import *
 from .utilities import *
 
 
-def visualize_raster(raster, ax='auto', offset=0, order=None, colors=None):
-    if order is None:
-        order = np.arange(raster.shape[1], dtype=int)
-    if colors is None:
-        colors = np.zeros(raster.shape[1], dtype=int)
-    if ax == 'auto':
-        f, ax = plt.subplots(figsize=(8, 5))
-        ax.set_xlabel('Time bin')
-        ax.set_ylabel('Neuron index')
-        ax.set_ylim([0, raster.shape[1]])
-    for i in range(raster.shape[1]):
-        d = np.where(raster[:, order[i]] > 0)[0]
-        ax.plot(d + offset, np.ones(len(d)) * i, linestyle='', marker='|', markersize=200.0 / raster.shape[1],
-                alpha=0.8, color=pltcolors[colors[order[i]] - 1])
+# Viz utilities
+
+def corrfunc(x, y, ax=None, **kws):
+    """Plot the correlation coefficient in the top left hand corner of a plot."""
+    slope, intercept, r, p, err = scipy.stats.linregress(x, y)
+    s, psp = scipy.stats.spearmanr(x, y)
+    ax = ax or plt.gca()
+    if p < 0.05 or psp < 0.05:
+        ax.annotate(f'r = {r:.2f}\n{p_to_ast(p):s}\nρ = {s:.2f}\n{p_to_ast(psp):s}\nn = {len(x):.0f}', xy=(.75, .01),
+                    xycoords=ax.transAxes, fontsize=8, color='k')
+    else:
+        ax.annotate(f'r = {r:.2f}\n{p_to_ast(p):s}\nρ = {s:.2f}\n{p_to_ast(psp):s}\nn = {len(x):.0f}', xy=(.75, .01),
+                    xycoords=ax.transAxes, fontsize=8, color='k')
+
+    xs = ax.get_xlim()
+    ax.plot(xs, slope * np.asarray(xs) + intercept, color=pltcolors[1], linewidth=2, alpha=0.5)
+
+
+def corr_scatter(x_data, y_data, xlabel, ylabel, ax=None, data_labels=None, corr=None, annotate=True, **kwargs):
+    nanmask = (np.isnan(x_data) == 0) & (np.isnan(y_data) == 0)
+    x = np.asarray(x_data)[nanmask]
+    y = np.asarray(y_data)[nanmask]
+    if corr is None:
+        corr = scipy.stats.pearsonr
+    returnax = False
+    if ax is None:
+        f, ax = plt.subplots(figsize=(4, 4))
+        returnax = True
+    slope, intercept, r, p, err = scipy.stats.linregress(x, y)
+    r, p = corr(x, y)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.scatter(x, y, **kwargs)
+    ys = ax.get_ylim()
+    xs = ax.get_xlim()
+    # ax.plot(xs, slope*np.asarray(xs)+intercept, color=pltcolors[1])
+    if annotate:
+        corrfunc(x, y, ax=ax)
+        # if p<0.05:
+        #     ax.text(xs[1], slope*np.asarray(xs)[1]+intercept, '%s\nr=%.2f' % (p_to_text(p), r), va='center', ha='center', color='r')
+        # else:
+        #     ax.text(xs[1], slope*np.asarray(xs)[1]+intercept, '%s\nr=%.2f' % (p_to_text(p), r), va='center', ha='center', color='k')
+    ax.set_ylim(ys)
+    ax.set_xlim([xs[0], xs[1] + (xs[1] - xs[0]) * 0.05])
+    sns.despine(ax=ax)
+
+    if data_labels is not None:
+        for i in range(len(x)):
+            ax.text(x[i], y[i], ' ' + data_labels[i])
+    if returnax:
+        return r, p, f, ax
+    else:
+        return r, p
+
+
+def line_with_shade(x, y, errfunc=np.nanstd, ax=None, axis=0, label='', color='k', alpha=0.1, **kwargs):
+    if ax is None:
+        f, ax = plt.subplots(figsize=(5, 4))
+
+    mean = np.nanmean(y, axis)
+    err = errfunc(y, axis)
+    ax.plot(x, mean, color=color, label=label, **kwargs)
+    ax.fill_between(x, mean - err, mean + err, color=color, alpha=alpha)
+    ax.plot(x, mean + err, linewidth=0.5, color=color, alpha=alpha + 0.2)
+    ax.plot(x, mean - err, linewidth=0.5, color=color, alpha=alpha + 0.2)
     return ax
 
+
+def smooth_hist(data, ax, bins, stairs=False, label=None, color='k'):
+    nonnan = np.isnan(data) == 0
+    arraydata = np.asarray(data)[nonnan]
+    density = scipy.stats.gaussian_kde(arraydata)
+    delta = np.nanmax(arraydata) - np.nanmin(arraydata)
+    x = np.linspace(np.nanmin(arraydata) - delta / 5., np.nanmax(arraydata) + delta / 5., bins)
+    if stairs:
+        n, x, _ = ax.hist(arraydata, bins=bins, histtype=u'step', density=True)
+    ax.plot(x, density(x), label=label, color=color)
+
+
+# Decoding visualization
 
 def setup_decoding_axis(ax, labels, ylow=0.4, yhigh=1.0, null=0.5):
     ax.set_ylabel('Decoding performance')
@@ -34,56 +97,6 @@ def setup_decoding_axis(ax, labels, ylow=0.4, yhigh=1.0, null=0.5):
         ax.axhline([null - i * 0.1], linestyle='-', color='k', alpha=0.1)
     ax.set_ylim([ylow, yhigh + 0.04])
     sns.despine(ax=ax)
-
-
-def plot_perfs(perfs_in, labels=None, x=0, ax=None, color=None, marker='o', alpha=0.8, s=50, errorbar=True,
-               annotate=True,
-               null=0.5, labelfontsize=9, linepadding=None, ptype='t', null_data=None):
-    perfs = np.asarray(perfs_in)
-    if null_data is not None:
-        null_means = np.nanmean(null_data, 1)
-
-    if not ax:
-        f, ax = plt.subplots()
-    if not color:
-        ax.scatter(np.ones(len(perfs)) * x, perfs, s=s, alpha=alpha, marker=marker)
-    else:
-        ax.scatter(np.ones(len(perfs)) * x, perfs, s=s, alpha=alpha, marker=marker, facecolor='w', edgecolors=color)
-
-    if errorbar:
-        ax.errorbar([x], np.nanmean(perfs), 2 * np.nanstd(perfs), color='k', linewidth=1, capsize=6,
-                    marker='_', alpha=0.5)
-
-    if annotate:
-        nonnan = np.isnan(perfs) == 0
-        if ptype == 't':
-            t, pval = ttest_1samp(perfs[nonnan], null)
-        if ptype == 'paired_w':
-            t, pval = wilcoxon(perfs[nonnan], null_means[nonnan])
-        if ptype == 'paired_t':
-            t, pval = ttest_rel(perfs[nonnan], null_means[nonnan])
-        if ptype == 'ttest_z':
-            zs = [(perfs[i] - np.nanmean(null_data[i])) / np.nanstd(null_data[i]) for i in range(len(perfs))]
-            t, pval = ttest_1samp(zs, 0)
-        if ptype == 'multi_z':
-            zs = [(perfs[i] - np.nanmean(null_data[i])) / np.nanstd(null_data[i]) for i in range(len(perfs))]
-            pval = scipy.stats.norm.sf(np.abs(np.nanmean(zs)))
-            t = np.nan
-
-        if linepadding is None:
-            if np.nanmean(perfs) > null:
-                linepadding = 0.01
-            else:
-                linepadding = -0.01
-
-        ax.plot([x - 0.15, x - 0.15, x - 0.12], [null + linepadding, np.nanmean(perfs), np.nanmean(perfs)], color='k',
-                alpha=0.5, linewidth=0.5)
-        ax.text(x - 0.14, 0.5 * (np.nanmean(perfs) + null), p_to_ast(pval), rotation=90, ha='right', va='center',
-                fontsize=14)
-
-    if labels is not None:
-        for i in range(len(perfs)):
-            ax.text(x + 0.05, perfs[i], labels[i], fontsize=labelfontsize)
 
 
 def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding performance', ax=None, shownull=False,
@@ -167,100 +180,6 @@ def plot_perfs_null_model_single(data, null, x=0, marker='d', ax=None, shownull=
             ha='right', va='center', fontsize=14)
 
     return pval
-
-
-def corrfunc(x, y, ax=None, **kws):
-    """Plot the correlation coefficient in the top left hand corner of a plot."""
-    slope, intercept, r, p, err = scipy.stats.linregress(x, y)
-    s, psp = scipy.stats.spearmanr(x, y)
-    ax = ax or plt.gca()
-    if p < 0.05 or psp < 0.05:
-        ax.annotate(f'r = {r:.2f}\n{p_to_ast(p):s}\nρ = {s:.2f}\n{p_to_ast(psp):s}\nn = {len(x):.0f}', xy=(.75, .01),
-                    xycoords=ax.transAxes, fontsize=8, color='k')
-    else:
-        ax.annotate(f'r = {r:.2f}\n{p_to_ast(p):s}\nρ = {s:.2f}\n{p_to_ast(psp):s}\nn = {len(x):.0f}', xy=(.75, .01),
-                    xycoords=ax.transAxes, fontsize=8, color='k')
-
-    xs = ax.get_xlim()
-    ax.plot(xs, slope * np.asarray(xs) + intercept, color=pltcolors[1], linewidth=2, alpha=0.5)
-
-
-def corr_scat_kde(x, y, ax=None, xlabel=None, ylabel=None, **kwargs):
-    ax = ax or plt.gca()
-    sns.scatterplot(x, y, ax=ax, **kwargs)
-    sns.kdeplot(x, y, ax=ax, kind='kde', alpha=0.7)
-    corrfunc(x, y, ax=ax)
-    sns.despine(ax=ax)
-    if xlabel:
-        ax.set_xlabel(xlabel)
-    if ylabel:
-        ax.set_ylabel(ylabel)
-    return ax
-
-
-def corr_scatter(x_data, y_data, xlabel, ylabel, ax=None, data_labels=None, corr=None, annotate=True, **kwargs):
-    nanmask = (np.isnan(x_data) == 0) & (np.isnan(y_data) == 0)
-    x = np.asarray(x_data)[nanmask]
-    y = np.asarray(y_data)[nanmask]
-    if corr is None:
-        corr = scipy.stats.pearsonr
-    returnax = False
-    if ax is None:
-        f, ax = plt.subplots(figsize=(4, 4))
-        returnax = True
-    slope, intercept, r, p, err = scipy.stats.linregress(x, y)
-    r, p = corr(x, y)
-
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.scatter(x, y, **kwargs)
-    ys = ax.get_ylim()
-    xs = ax.get_xlim()
-    # ax.plot(xs, slope*np.asarray(xs)+intercept, color=pltcolors[1])
-    if annotate:
-        corrfunc(x, y, ax=ax)
-        # if p<0.05:
-        #     ax.text(xs[1], slope*np.asarray(xs)[1]+intercept, '%s\nr=%.2f' % (p_to_text(p), r), va='center', ha='center', color='r')
-        # else:
-        #     ax.text(xs[1], slope*np.asarray(xs)[1]+intercept, '%s\nr=%.2f' % (p_to_text(p), r), va='center', ha='center', color='k')
-    ax.set_ylim(ys)
-    ax.set_xlim([xs[0], xs[1] + (xs[1] - xs[0]) * 0.05])
-    sns.despine(ax=ax)
-
-    if data_labels is not None:
-        for i in range(len(x)):
-            ax.text(x[i], y[i], ' ' + data_labels[i])
-    if returnax:
-        return r, p, f, ax
-    else:
-        return r, p
-
-
-def line_with_shade(x, y, errfunc=np.nanstd, ax=None, axis=0, label='', color='k', alpha=0.1, **kwargs):
-    if ax is None:
-        f, ax = plt.subplots(figsize=(5, 4))
-
-    mean = np.nanmean(y, axis)
-    err = errfunc(y, axis)
-    ax.plot(x, mean, color=color, label=label, **kwargs)
-    ax.fill_between(x, mean - err, mean + err, color=color, alpha=alpha)
-    ax.plot(x, mean + err, linewidth=0.5, color=color, alpha=alpha + 0.2)
-    ax.plot(x, mean - err, linewidth=0.5, color=color, alpha=alpha + 0.2)
-    return ax
-
-
-def smooth_hist(data, ax, bins, stairs=False, label=None, color='k'):
-    nonnan = np.isnan(data) == 0
-    arraydata = np.asarray(data)[nonnan]
-    density = scipy.stats.gaussian_kde(arraydata)
-    delta = np.nanmax(arraydata) - np.nanmin(arraydata)
-    x = np.linspace(np.nanmin(arraydata) - delta / 5., np.nanmax(arraydata) + delta / 5., bins)
-    if stairs:
-        n, x, _ = ax.hist(arraydata, bins=bins, histtype=u'step', density=True)
-    ax.plot(x, density(x), label=label, color=color)
-
-
-# Decoding visualization
 
 
 def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, testing_trials=None):
@@ -424,6 +343,25 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
                      color=pltcolors[n], alpha=0.4)
 
 
+# Session visualizations
+
+def visualize_raster(raster, ax='auto', offset=0, order=None, colors=None):
+    if order is None:
+        order = np.arange(raster.shape[1], dtype=int)
+    if colors is None:
+        colors = np.zeros(raster.shape[1], dtype=int)
+    if ax == 'auto':
+        f, ax = plt.subplots(figsize=(8, 5))
+        ax.set_xlabel('Time bin')
+        ax.set_ylabel('Neuron index')
+        ax.set_ylim([0, raster.shape[1]])
+    for i in range(raster.shape[1]):
+        d = np.where(raster[:, order[i]] > 0)[0]
+        ax.plot(d + offset, np.ones(len(d)) * i, linestyle='', marker='|', markersize=200.0 / raster.shape[1],
+                alpha=0.8, color=pltcolors[colors[order[i]] - 1])
+    return ax
+
+
 def visualize_session(session, neural_key='raster', other_keys='all'):
     if other_keys == 'all':
         keys = list(session.keys())
@@ -443,3 +381,82 @@ def visualize_session(session, neural_key='raster', other_keys='all'):
         axs[i + 1].plot(session[key], color=pltcolors[i])
         axs[i + 1].set_title(key)
     axs[-1].set_xlabel('Time')
+
+
+def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null=None, names=None, axs=None):
+    # performance and CCGP
+
+    mpl.rcParams.update({'figure.autolayout': False})
+
+    cos_dis = mahalanobis_dissimilarity(dec)
+    # cos_dis = cosyne_dissimilarity(np.vstack([r for r in self.centroids.values()]))
+    embedding = MDS(n_components=dim, dissimilarity='precomputed')
+    components = embedding.fit_transform(cos_dis)
+
+    if names is None:
+        names = list(dec._semantic_vectors.keys())
+
+    if data is not None and null is not None:
+        if axs is None:
+            fig = plt.figure(figsize=(12, 5))
+            G = GridSpec(12, 12)
+            ax = fig.add_subplot(G[:, 0:6], projection='3d')
+            ax_dec = fig.add_subplot(G[1:9, 6:9])
+            ax_ccgp = fig.add_subplot(G[1:9, 10:])
+        else:
+            ax = axs[0]
+            ax_dec = axs[1]
+            ax_ccgp = axs[2]
+            fig = ax.get_figure()
+
+        ax_dec.set_title(title)
+
+        plot_perfs_null_model(data['Decoding'], null['Decoding'], ax=ax_dec,
+                              shownull='violin')
+        plot_perfs_null_model(data['CCGP'], null['CCGP'], ax=ax_ccgp,
+                              shownull='violin', ylabel='CCGP', marker='x')
+    else:
+        if axs is None:
+            fig = plt.figure(figsize=(6, 5))
+            ax = fig.add_subplot(projection='3d')
+        else:
+            ax = axs
+            fig = ax.get_figure()
+
+    ax.grid(False)
+    ax.set_axis_off()
+    plt.subplots_adjust(left=0, right=0.95, top=1, bottom=0)
+
+    def init():
+        for i in range(len(names)):
+            ax.scatter(components[i, 0], components[i, 1], components[i, 2], alpha=0.7, marker='$%s$' % names[i],
+                       s=400)
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                if hamming_distance(names[i], names[j]) == 1:
+                    ax.plot([components[i][0], components[j][0]], [components[i][1], components[j][1]],
+                            [components[i][2], components[j][2]], linestyle='-', linewidth=2, color='k', alpha=0.7)
+                elif hamming_distance(names[i], names[j]) == 2:
+                    ax.plot([components[i][0], components[j][0]], [components[i][1], components[j][1]],
+                            [components[i][2], components[j][2]], linestyle='--', color='k', alpha=0.3)
+        equalize_ax(ax)
+
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_zticklabels([])
+        return fig,
+
+    def animate(i):
+        ax.view_init(elev=10., azim=i * 2)
+        return fig,
+
+    if savename:
+        anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                       frames=360, interval=20, blit=True)
+        mywriter = animation.PillowWriter(fps=30)
+        anim.save(savename, writer=mywriter)
+    else:
+        init()
+    mpl.rcParams.update({'figure.autolayout': True})
+    return fig
+
