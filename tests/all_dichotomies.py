@@ -11,7 +11,7 @@ import seaborn as sns
 # All dichotomies except XOR should be decodable in a low-dimensional geometry
 
 
-def teat_all_dichotomies():
+def test_all_dichotomies():
     np.random.seed(0)
 
     data = generate_synthetic_data(n_neurons=80, n_trials=100, rateB=0.3, rateA=0.3, keyA='stimulus',
@@ -41,11 +41,11 @@ def teat_all_dichotomies():
     ax.set_ylabel('Decoding Performance')
     ax.set_xlabel('Dichotomy')
     ax.set_title('Low-D Geometry')
-    f.savefig('./all_dichotomies_lowd.pdf')
+    f.savefig('./figures/all_dichotomies_lowd.pdf')
     assert np.max(pvals[:-1]) < 0.05, "All non-XOR dichotomies should be decodable in a Low-D geometry."
     assert pvals[-1] > 0.05, "XOR should not be decodable in a low-D geometry."
 
 
 if __name__ == "__main__":
-    teat_all_dichotomies()
+    test_all_dichotomies()
     print("\nAll Decodable Dichotomies Test Passed")

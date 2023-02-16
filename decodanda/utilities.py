@@ -7,7 +7,9 @@ from .imports import *
 # Classes
 
 
-class CrossValidator(object):  # necessary for parallelization of cross validation repetitions
+class CrossValidator(object):
+    # necessary for parallelization of cross validation repetitions
+    # TODO: fix parallelization by fixing this
     def __init__(self, classifier, conditioned_rasters, conditioned_trial_index, dic, training_fraction, ndata, subset,
                  semantic_vectors):
         self.classifier = classifier
@@ -261,7 +263,6 @@ class Logger:
         self.log(logtext)
 
 
-
 # Sampling functions
 
 
@@ -423,7 +424,6 @@ def non_contiguous_mask(trials, chunks):
 
 # Decodanda init utilities
 
-
 def delete_silent_bins(array):
     mask = np.sum(array, 1) > 0
     return array[mask, :]
@@ -471,6 +471,7 @@ def semantic_score(dic):
     d = [string_bool(x) for x in dic[0]]
     fingerprint = np.abs(np.sum(d, 0) - len(d) / 2)
     return np.max(fingerprint) * np.sum(fingerprint)
+
 
 # Analysis
 

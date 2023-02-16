@@ -423,8 +423,8 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
             ax = axs
             fig = ax.get_figure()
 
-    ax.grid(False)
-    ax.set_axis_off()
+    #ax.grid(False)
+    #ax.set_axis_off()
     plt.subplots_adjust(left=0, right=0.95, top=1, bottom=0)
 
     def init():
