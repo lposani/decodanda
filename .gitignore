@@ -5,6 +5,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Stuff to not commit
+backup
+
 # C extensions
 *.so
 
@@ -14,6 +17,7 @@ __pycache__/
 # Egg file for development
 decodanda.egg-info
 ./decodanda/.DS_Store
+
 # Distribution / packaging
 .Python
 env/
