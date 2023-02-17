@@ -33,7 +33,13 @@ Have fun, drink water, and decode safely!
 
 ### Install
 <hr>
-To install Decodanda, run
+Decodanda can be installed via pip:
+
+```bash
+pip install decodanda
+```
+
+Alternatively, to install Decodanda locally, run
 
 ```bash
 python3 setup.py install
