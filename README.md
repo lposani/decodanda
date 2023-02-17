@@ -7,10 +7,10 @@ is a Python package for decoding and geometrical analysis of neural activity.
 Decodanda is designed to expose a user-friendly and flexible interface for population 
 activity decoding, avoiding the most common pitfalls by a series of built-in best practices:
 
-- The individual contributions of correlated or unbalanced experimental variables are isolated by cross-variable class balancing ([notebook](https://github.com/lposani/decodanda/blob/master/notebooks/disentangling_confounds.ipynb))
 - Cross-validation is automatically implemented using a default or specified trial structure
 - All analyses come with a built-in null model to test the significance of the data performance ([notebook](https://github.com/lposani/decodanda/blob/master/notebooks/single_var_decoding.ipynb))
 - Multi-sessions pooling to create pseudo-populations is supported out of the box ([notebook](https://github.com/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb))
+- The individual contributions of multiple correlated experimental variables are isolated by cross-variable data balancing, avoding the confounding effects of correlated variables ([notebook](https://github.com/lposani/decodanda/blob/master/notebooks/disentangling_confounds.ipynb))
 
 In addition, Decodanda exposes a series of functions to compute the 
 Cross-Condition Generalization Performance (_CCGP_, Bernardi et al. 2020) 

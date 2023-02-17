@@ -844,7 +844,96 @@ class Decodanda:
 
     def CCGP_with_nullmodel(self, dichotomy, resamplings=5, nshuffles=25, ndata: Optional[int] = None, max_semantic_dist=1, return_combinations=False):
 
-        # TODO: write doc
+        """
+                Function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
+                for a given variable, specified through its corresponding dichotomy.
+
+                    This function tests how well a given coding strategy for the given variable generalizes
+                when the other variables are changed and compares the
+                resulting values with a geometrical null model that keeps variables decodable but randomly
+                displaces conditions in the neural activity space, hence breaking any coding parallelism and generizability.
+                See Bernardi et al 2020 & Boyle, Posani et al. 2023 for more details.
+
+                Parameters
+                ----------
+                    dichotomy : str || list
+                        The dichotomy corresponding to the variable to be tested, expressed in a double-list binary format, e.g. [['10', '11'], ['01', '00']], or as a variable name.
+                    resamplings:
+                        The number of iterations for each decoding analysis. The returned performance value is the average over these resamplings.
+                    nshuffles:
+                        The number of null-model iterations for the CCGP analysis.
+                    ndata:
+                        The number of data points (population vectors) sampled for training and for testing for each condition.
+                    max_semantic_dist:
+                        The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+                    return_combinations:
+                        If True, returns all the individual performances for cross-conditions train-test splits, otherwise returns the average over combinations.
+
+
+                Returns
+                -------
+                    ccgp: mean of performance values for each cross-condition training-testing split (or list, if ``return_combinations=True``).
+                    null: a list of null values for the mean ccgp
+
+                Note
+                ----
+
+                This function trains the ``self._classifier`` to decode the given variable in a sub-set
+                of conditions, and tests it on the held-out set.
+
+                The split of training and testing conditions is decided by the ``max_semantic_dist`` parameter: if set to 1,
+                only pairs of conditions that have all variables in common except the specified one are held out to test the
+                classifier.
+
+
+                    For example, if the data set has two variables
+                ``stimulus`` :math:`\\in` {-1, 1} and ``action`` :math:`\\in` {-1, 1}, to compute CCGP for ``stimulus``
+                with ``max_semantic_dist=1`` this function will train the classifier on
+
+                ``(stimulus = -1, action = -1)`` vs. ``(stimulus = 1, action = -1)``
+
+                And test it on
+
+                ``(stimulus = -1, action = 1)`` vs. ``(stimulus = 1, action = 1)``
+
+                note that action is kept fixed within the training and testing conditions.
+
+                If instead we use ``max_semantic_dist=2``, all possible combinations are used, including training on
+
+                ``(stimulus = -1, action = -1)`` vs. ``(stimulus = 1, action = 1)``
+
+                and testing on
+
+                ``(stimulus = -1, action = 1)`` vs. ``(stimulus = 1, action = -1)``
+
+
+                        ``dichotomy`` can be passed as a string or as a list.
+                If a string is passed, it has to be a name of one of the variables specified in the conditions dictionary.
+
+                If a list is passed, it needs to contain two lists in the shape [[...], [...]].
+                Each sub list contains the conditions used to define one of the two decoded classes
+                in binary notation.
+
+                For example, if the data set has two variables
+                ``stimulus`` :math:`\\in` {-1, 1} and ``action`` :math:`\\in` {-1, 1}, the condition
+                ``stimulus=-1`` & ``action=-1`` will correspond to the binary notation ``'00'``,
+                the condition ``stimulus=+1`` & ``action=-1`` will correspond to ``10`` and so on.
+
+                Therefore, if ``stimulus`` is the first variable in the conditions dictionary, its corresponding dichotomy is
+
+                >>> stimulus = [['00', '01'], ['10', '11']]
+
+                Example
+                -------
+                >>> data = generate_synthetic_data(keyA='stimulus', keyB='action')
+                >>> dec = Decodanda(data=data, conditions={'stimulus': [-1, 1], 'action': [-1, 1]})
+                >>> perf, null = dec.CCGP_with_nullmodel('stimulus', nshuffles=10)
+                >>> perf
+                0.85
+                >>> null
+                [0.44, 0.48, ..., 0.54] # 10 values
+                """
+
         performances = self.CCGP_dichotomy(dichotomy=dichotomy, resamplings=resamplings, ndata=ndata, max_semantic_dist=max_semantic_dist)
 
         if return_combinations:
@@ -1035,6 +1124,72 @@ class Decodanda:
              plot: bool = False,
              ax: Optional[plt.Axes] = None,
              **kwargs):
+
+        """
+        Main function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
+        for the variables specified through the ``conditions`` dictionary.
+
+        It returns a single ccgp value per variable which represents the average over
+        all cross-condition train-test splits.
+
+        It also returns an array of null-model values for each variable to test the significance of
+        the corresponding ccgp result. The employed geometrical null model keeps variables decodable but randomly
+        displaces conditions in the neural activity space, hence breaking any coding parallelism and generizability.
+        See Bernardi et al 2020 & Boyle, Posani et al. 2023 for more details.
+
+        Parameters
+        ----
+            resamplings:
+                The number of iterations for each decoding analysis. The returned performance value is the average over these resamplings.
+            nshuffles:
+                The number of null-model iterations for the CCGP analysis.
+            ndata:
+                The number of data points (population vectors) sampled for training and for testing for each condition.
+            max_semantic_dist:
+                The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+
+        Returns
+        -------
+            performance: mean of performance values for each cross-condition training-testing split.
+            null: a list of null values for the generalization performance
+
+        See Also
+        --------
+        Decodanda.CCGP_with_nullmodel
+
+        Note
+        ----
+
+        For each variable, this function trains the ``self._classifier`` to decode the given variable in a sub-set
+        of conditions, and tests it on the held-out set.
+
+        The split of training and testing conditions is performed by keeping the semantic distance between held out
+        conditions to 1 (``max_semantic_dist=1`` in the CCGP_dichotomy function).
+
+        For example, if the data set has two variables:
+
+        ``stimulus`` :math:`\\in` {-1, 1} and ``action`` :math:`\\in` {-1, 1}, to compute CCGP for ``stimulus``
+
+        This function will train the classifier on
+
+        ``(stimulus = -1, action = -1)`` vs. ``(stimulus = 1, action = -1)``
+
+        And test it on
+
+        ``(stimulus = -1, action = 1)`` vs. ``(stimulus = 1, action = 1)``
+
+        And vice-versa. Note that action is kept fixed within the training and testing conditions.
+
+        Example
+        -------
+        >>> data = generate_synthetic_data(keyA='stimulus', keyB='action')
+        >>> dec = Decodanda(data=data, conditions={'stimulus': [-1, 1], 'action': [-1, 1]})
+        >>> perfs, null = dec.CCGP_with_nullmodel(nshuffles=10)
+        >>> perfs
+        {'stimulus': 0.81, 'action': 0.79}  # each value is the mean over 2 cross-condition train-test splits
+        >>> null
+        {'stimulus': [0.51, ..., 0.46], 'action': [0.48, ..., 0.55]}  # null model means, 10 values each
+        """
 
         semantic_dics, semantic_keys = self._find_semantic_dichotomies()
 
