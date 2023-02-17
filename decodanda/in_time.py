@@ -5,7 +5,7 @@ from .utilities import p_to_ast, z_pval
 
 
 def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,
-                   plot=False, time_key='Time'):
+                   plot=False, time_key='Time', verbose=False):
     """
     :param data: the dataset to be decoded, in the same for as in the Decodanda constructor.
     :param conditions: the variables with values to be decoded, in the same for as in the Decodanda constructor.
@@ -14,6 +14,7 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
     :param decoding_params: dictionary of parameters for the Decodanda.decode() function.
     :param time_boundaries: List [min, max]: only trials with data points spanning the whole time interval will be considered for the decoding analysis.
     :return: performances, null
+
     """
     if type(data) != list:
         data = [data]
@@ -28,8 +29,9 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
             if t == all_times[0]:
                 if (dataset[time_attr][i:i + len(all_times)] == all_times).all():
                     dataset['time_selected'][i:i + len(all_times)] = dataset[time_attr][i:i + len(all_times)]
-        print("times min: %.2f, max: %.2f - %u trials out of %u" % (
-            all_times[0], all_times[-1], np.sum(dataset['time_selected'] == 0), np.sum(dataset[time_attr] == 0)))
+        if verbose:
+            print("times min: %.2f, max: %.2f - %u trials out of %u" % (
+                all_times[0], all_times[-1], np.sum(dataset['time_selected'] == 0), np.sum(dataset[time_attr] == 0)))
 
     # now assuming time_attr has T unique values that are common for all trials / events
 
@@ -46,14 +48,16 @@ def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, d
         pvalues = {key: np.zeros(len(time_centers)) * np.nan for key in conditions}
 
     for i, t in tqdm(enumerate(time_centers)):
-        print("\n[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t + time_window))
+        if verbose:
+            print("\n[Decoding in time]\tdecoding using data in the time window: [%.2f, %.2f]" % (t, t + time_window))
         perfs, null = decoding_at_time(data, conditions, 'time_selected', t, time_window, decodanda_params,
                                        decoding_params)
         for key in perfs:
             performances[key][i] = perfs[key]
             nulls[key][i] = null[key]
-            print(key, 'Performance: %.2f' % np.nanmean(perfs[key]), 'Null: %.2f +- %.2f std' %
-                  (np.nanmean(null[key]), np.nanstd(null[key])), p_to_ast(z_pval(perfs[key], null[key])[1]))
+            if verbose:
+                print(key, 'Performance: %.2f' % np.nanmean(perfs[key]), 'Null: %.2f +- %.2f std' %
+                      (np.nanmean(null[key]), np.nanstd(null[key])), p_to_ast(z_pval(perfs[key], null[key])[1]))
             pvalues[key][i] = z_pval(perfs[key], null[key])[1]
 
     if plot:
@@ -103,7 +107,8 @@ def CCGP_in_time(data, conditions, time_attr, time_window, decodanda_params, dec
         all_times = all_times[all_times <= time_boundaries[1]]
         for i, t in enumerate(dataset[time_attr]):
             if t == all_times[0]:
-                if (len(dataset[time_attr][i:i + len(all_times)]) == len(all_times)) and (dataset[time_attr][i:i + len(all_times)] == all_times).all():
+                if (len(dataset[time_attr][i:i + len(all_times)]) == len(all_times)) and (
+                        dataset[time_attr][i:i + len(all_times)] == all_times).all():
                     dataset['time_selected'][i:i + len(all_times)] = dataset[time_attr][i:i + len(all_times)]
         print("times min: %.2f, max: %.2f - %u trials out of %u" % (
             all_times[0], all_times[-1], np.sum(dataset['time_selected'] == 0), np.sum(dataset[time_attr] == 0)))
@@ -171,7 +176,8 @@ def decoding_at_time(data, conditions, time_attr, time, dt, decodanda_params, de
             t_conditions[key][sub_key] = lambda d, t0=time, mk=key, k=sub_key: conditions[mk][k](d) & (
                     d[time_attr] >= t0) & (d[
                                                time_attr] < t0 + dt)  # pass these  ^      ^       ^   as default args to allow iteration
-    perfs, null = Decodanda(data=data, conditions=t_conditions, **decodanda_params).decode(non_semantic=True, **decoding_params)
+    perfs, null = Decodanda(data=data, conditions=t_conditions, **decodanda_params).decode(non_semantic=True,
+                                                                                           **decoding_params)
     return perfs, null
 
 
