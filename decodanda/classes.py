@@ -1184,7 +1184,7 @@ class Decodanda:
         -------
         >>> data = generate_synthetic_data(keyA='stimulus', keyB='action')
         >>> dec = Decodanda(data=data, conditions={'stimulus': [-1, 1], 'action': [-1, 1]})
-        >>> perfs, null = dec.CCGP_with_nullmodel(nshuffles=10)
+        >>> perfs, null = dec.CCGP(nshuffles=10)
         >>> perfs
         {'stimulus': 0.81, 'action': 0.79}  # each value is the mean over 2 cross-condition train-test splits
         >>> null
