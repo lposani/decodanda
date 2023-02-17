@@ -978,3 +978,61 @@ def visualize_synthetic_data(session):
     axs[1].set_title('trial')
     axs[2].set_title(keys[0])
     axs[3].set_title(keys[1])
+
+
+def generate_synthetic_data_intime(n_neurons=50, min_time=-10, max_time=10, signal=0.2, ntrials=10):
+    rA = np.random.rand(n_neurons) * signal
+    rB = np.random.rand(n_neurons) * signal
+    rnone = np.random.rand(n_neurons) * signal
+    data = {
+        'raster': [],
+        'trial': [],
+        'time_from_onset': [],
+        'stimulus': []
+    }
+
+    # sampling A trials
+    for trial in range(ntrials):
+        trial_raster = []
+        trial_time = np.arange(min_time, max_time)
+        for t in trial_time:
+            vector = []
+            if t > 0:
+                for n in range(n_neurons):
+                    vector.append(np.random.poisson(lam=rA[n], size=1))
+            if t <= 0:
+                for n in range(n_neurons):
+                    vector.append(np.random.poisson(lam=rnone[n], size=1))
+            trial_raster.append(vector)
+
+        data['raster'].append(trial_raster)
+        data['time_from_onset'].append(trial_time)
+        data['trial'].append(np.ones(len(trial_time))*trial)
+        data['stimulus'].append(np.repeat('A', len(trial_time)))
+
+    # sampling B trials
+    for trial in range(ntrials):
+        trial_raster = []
+        trial_time = np.arange(min_time, max_time)
+        for t in trial_time:
+            vector = []
+            if t > 0:
+                for n in range(n_neurons):
+                    vector.append(np.random.poisson(lam=rB[n], size=1))
+            if t <= 0:
+                for n in range(n_neurons):
+                    vector.append(np.random.poisson(lam=rnone[n], size=1))
+            trial_raster.append(vector)
+
+        data['raster'].append(trial_raster)
+        data['time_from_onset'].append(trial_time)
+        data['trial'].append(np.ones(len(trial_time)) * trial)
+        data['stimulus'].append(np.repeat('B', len(trial_time)))
+
+    data['raster'] = np.vstack(data['raster'])
+    data['time_from_onset'] = np.hstack(data['time_from_onset'])
+    data['trial'] = np.hstack(data['trial'])
+    data['stimulus'] = np.hstack(data['stimulus'])
+
+    return data
+
