@@ -1,7 +1,18 @@
+#     Copyright (C) 2023  Lorenzo Posani
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+
 import copy
 from typing import Tuple, Union
-
-import numpy as np
 from numpy import ndarray
 from .imports import *
 from .utilities import generate_binary_words, string_bool, sample_training_testing_from_rasters, CrossValidator, \
@@ -1213,12 +1224,12 @@ class Decodanda:
 
         return ccgp, ccgp_nullmodel
 
-    def geometrical_analysis(self,
-                             training_fraction: float = 0.75,
-                             cross_validations: int = 10,
-                             nshuffles: int = 10,
-                             ndata: Optional[int] = None,
-                             visualize=True):
+    def semantic_score_geometry(self,
+                                training_fraction: float = 0.75,
+                                cross_validations: int = 10,
+                                nshuffles: int = 10,
+                                ndata: Optional[int] = None,
+                                visualize=True):
         """
         This function performs a balanced decoding analysis for each possible dichotomy, and
         plots the result sorted by a semantic score that tells how close each dichotomy is to

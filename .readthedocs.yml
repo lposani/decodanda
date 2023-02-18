@@ -1,0 +1,6 @@
+version: 2
+
+# Build documentation using Sphinx
+sphinx:
+  configuration: docs/source/conf.py
+  builder: html
