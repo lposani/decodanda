@@ -1,5 +1,8 @@
 # Decodanda
-<hr>
+![python 3.8](https://upload.wikimedia.org/wikipedia/commons/a/a5/Blue_Python_3.8_Shield_Badge.svg)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![docs](https://readthedocs.org/projects/docs/badge/?version=latest)](https://decodanda.readthedocs.io/en/latest/index.html)
+
 
 Decodanda ([dog-latin](https://en.wikipedia.org/wiki/Dog_Latin) for "to be decoded") 
 is a Python package for decoding and geometrical analysis of neural activity.
@@ -25,7 +28,9 @@ Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master
 
 For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
-For any feedback, please contact me through [this module](https://forms.gle/iifpsAAPuRBbYzxJ6).
+Here is a link to the documentation on [readthedocs](https://decodanda.readthedocs.io/en/latest/modules.html)
+
+If you are interest in collaborating or contributing to the project, please contact me through [this module](https://forms.gle/iifpsAAPuRBbYzxJ6).
 
 
 Have fun, drink water, and decode safely!
