@@ -28,8 +28,6 @@ Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master
 
 For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
-Here is a link to the documentation on [readthedocs](https://decodanda.readthedocs.io/en/latest/modules.html)
-
 If you are interest in collaborating or contributing to the project, please contact me through [this module](https://forms.gle/iifpsAAPuRBbYzxJ6).
 
 
@@ -51,6 +49,10 @@ python3 setup.py install
 ```
 
 from the home folder of the package. It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/tutorials/installing-packages/#creating-and-using-virtual-environments) to manage packages and dependencies.
+
+### Documentation
+Visit [https://decodanda.readthedocs.io](https://decodanda.readthedocs.io/en/latest/modules.html) for the complete documentation.
+
 
 ### Data structure
 <hr>
