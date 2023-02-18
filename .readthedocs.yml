@@ -4,4 +4,4 @@ version: 2
 sphinx:
   configuration: docs/source/conf.py
   builder: html
-
+  requirements_file: requirements.txt
