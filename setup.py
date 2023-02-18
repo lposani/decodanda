@@ -19,6 +19,6 @@ setup(
     url="https://github.com/lposani/decodanda",
     classifiers=[
         "Programming Language :: Python :: 3.8",
-        "License :: GPLv3",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     ],
 )
