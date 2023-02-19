@@ -19,9 +19,8 @@ In addition, Decodanda exposes a series of functions to compute the
 Cross-Condition Generalization Performance (_CCGP_, Bernardi et al. 2020) 
 for the geometrical analysis of neural population activity ([notebook](https://github.com/lposani/decodanda/blob/notebooks/master/CCGP.ipynb)).
 
-
 Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master/notebooks) for some examples on
-- [single-variable decoding](https://github.com/lposani/decodanda/blob/master/notebooks/single_var_decoding.ipynb) [![](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lposani/decodanda/blob/master/notebooks/single_var_decoding.ipynb)
+- [single-variable decoding](https://github.com/lposani/decodanda/blob/master/notebooks/single_var_decoding.ipynb) (with null model) [![](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lposani/decodanda/blob/master/notebooks/single_var_decoding.ipynb)
 - [multi-variable decoding](https://github.com/lposani/decodanda/blob/master/notebooks/disentangling_confounds.ipynb) (disentangling correlated variables) [![](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lposani/decodanda/blob/master/notebooks/disentangling_confounds.ipynb)
 - [pseudo-population decoding](https://github.com/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb) (pooling neurons from multiple data sets) [![](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lposani/decodanda/blob/master/notebooks/pseudopopulation_decoding.ipynb)
 - [decoding in time](https://github.com/lposani/decodanda/blob/master/notebooks/decoding_in_time.ipynb) [![](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lposani/decodanda/blob/master/notebooks/decoding_in_time.ipynb)
