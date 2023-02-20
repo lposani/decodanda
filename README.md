@@ -28,7 +28,7 @@ Please refer to the [notebooks](https://github.com/lposani/decodanda/blob/master
 
 For a guided explanation of some of the best practices implemented by Decodanda, you can refer to [my teaching material](https://tinyurl.com/ArtDecod) for the Advanced Theory Course in Neuroscience at Columbia University.
 
-If you are interest in collaborating or contributing to the project, please contact me through [this module](https://forms.gle/iifpsAAPuRBbYzxJ6).
+If you are interested in collaborating or contributing to the project, get in touch with me through [this module](https://forms.gle/iifpsAAPuRBbYzxJ6) or shoot me an old-fashioned email!.
 
 
 Have fun, drink water, and decode safely!
