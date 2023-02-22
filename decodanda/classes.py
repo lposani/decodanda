@@ -1514,12 +1514,12 @@ class Decodanda:
                 nonsemantic_dics.append(dic)
         return nonsemantic_dics
 
-    def all_dichotomies(self, balanced=True):
+    def all_dichotomies(self, balanced=True, semantic_names=False):
         if balanced:
             dichotomies = {}
             sem, keys = self._find_semantic_dichotomies()
             nsem = self._find_nonsemantic_dichotomies()
-            if self.n_conditions == 2:
+            if (self.n_conditions == 2) and semantic_names:
                 dichotomies[keys[0]] = sem[0]
                 dichotomies[keys[1]] = sem[1]
                 dichotomies['XOR'] = nsem[0]
@@ -1533,7 +1533,7 @@ class Decodanda:
             dichotomies = {}
             for dk in powerchotomies:
                 k = self._dic_key(powerchotomies[dk])
-                if k:
+                if k and semantic_names:
                     dichotomies[k] = powerchotomies[dk]
                 else:
                     dichotomies[dk] = powerchotomies[dk]
