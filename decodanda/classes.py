@@ -13,11 +13,13 @@
 
 import copy
 from typing import Tuple, Union
+
+import scipy.stats.stats
 from numpy import ndarray
 from .imports import *
 from .utilities import generate_binary_words, string_bool, sample_training_testing_from_rasters, CrossValidator, \
     log_dichotomy, hamming, sample_from_rasters, generate_dichotomies, semantic_score, z_pval, DictSession, \
-    contiguous_chunking, non_contiguous_mask
+    contiguous_chunking, non_contiguous_mask, cosine
 from .visualize import corr_scatter, visualize_decoding, plot_perfs_null_model
 
 
@@ -187,7 +189,6 @@ class Decodanda:
 
         """
 
-
         # casting single session to a list so that it is compatible with all loops below
         if type(data) != list:
             data = [data]
@@ -342,11 +343,11 @@ class Decodanda:
         # allow for unbalanced dichotomies
         n_conditions_A = float(len(dic[0]))
         n_conditions_B = float(len(dic[1]))
-        fraction = n_conditions_A/n_conditions_B
+        fraction = n_conditions_A / n_conditions_B
 
         for d in set_A:
             training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
-                                                                     int(ndata/fraction),
+                                                                     int(ndata / fraction),
                                                                      training_fraction,
                                                                      self.conditioned_trial_index[d],
                                                                      debug=self._debug,
@@ -390,10 +391,10 @@ class Decodanda:
             big_mean = np.nanmean(big_raster, 0)
             big_std = np.nanstd(big_raster, 0)
             big_std[big_std == 0] = np.inf
-            training_array_A = (training_array_A - big_mean)/big_std
-            training_array_B = (training_array_B - big_mean)/big_std
-            testing_array_A = (testing_array_A - big_mean)/big_std
-            testing_array_B = (testing_array_B - big_mean)/big_std
+            training_array_A = (training_array_A - big_mean) / big_std
+            training_array_B = (training_array_B - big_mean) / big_std
+            testing_array_A = (testing_array_A - big_mean) / big_std
+            testing_array_B = (testing_array_B - big_mean) / big_std
 
         self._train(training_array_A, training_array_B, label_A, label_B)
 
@@ -411,7 +412,7 @@ class Decodanda:
 
         return performance
 
-    # Dichotomy decoding functions
+    # Dichotomy analysis functions
 
     def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,
                          cross_validations: int = 10, ndata: Optional[int] = None,
@@ -546,7 +547,11 @@ class Decodanda:
             self._order_conditioned_rasters()
         return np.asarray(performances)
 
-    def CCGP_dichotomy(self, dichotomy, resamplings=3, ndata: Optional[int] = None, max_semantic_dist=1, shuffled=False):
+    def CCGP_dichotomy(self, dichotomy: Union[str, list],
+                       resamplings: int = 3,
+                       ndata: Optional[int] = None,
+                       max_semantic_dist: int = 1,
+                       shuffled: bool = False):
         """
         Function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
         for a given variable, specified through its corresponding dichotomy. This function tests how well a given
@@ -692,12 +697,87 @@ class Decodanda:
                             testing_array_A = testing_array_A[:, rotation_A]
                             testing_array_B = testing_array_B[:, rotation_A]
 
+                        if self._zscore:
+                            big_raster = np.vstack(
+                                [training_array_A, training_array_B, testing_array_A, testing_array_B])
+                            big_mean = np.nanmean(big_raster, 0)
+                            big_std = np.nanstd(big_raster, 0)
+                            big_std[big_std == 0] = np.inf
+                            training_array_A = (training_array_A - big_mean) / big_std
+                            training_array_B = (training_array_B - big_mean) / big_std
+                            testing_array_A = (testing_array_A - big_mean) / big_std
+                            testing_array_B = (testing_array_B - big_mean) / big_std
+
                         self._train(training_array_A, training_array_B, label_A, label_B)
                         performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
                         performances.append(performance)
 
             all_performances.append(performances)
         return np.nanmean(all_performances, 0)
+
+    def parallelism_score_dichotomy(self, dichotomy: Union[str, list],
+                                    max_semantic_dist: int = 1,
+                                    shuffled: bool = False,
+                                    method: str = 'pearson',
+                                    return_combinations: bool = False):
+        if type(dichotomy) == str:
+            dic = self._dichotomy_from_key(dichotomy)
+        else:
+            dic = dichotomy
+
+        ndata = 2 * self._max_conditioned_data
+
+        coding_directions = []
+
+        set_A = dic[0]
+        set_B = dic[1]
+
+        for i in range(len(set_A)):
+            for j in range(len(set_B)):
+                test_condition_A = set_A[i]
+                test_condition_B = set_B[j]
+                if hamming(string_bool(test_condition_A), string_bool(test_condition_B)) <= max_semantic_dist:
+                    testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A], ndata=ndata)
+                    testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B], ndata=ndata)
+
+                    if shuffled:
+                        rotation_A = np.arange(testing_array_A.shape[1]).astype(int)
+                        rotation_B = np.arange(testing_array_B.shape[1]).astype(int)
+                        np.random.shuffle(rotation_A)
+                        np.random.shuffle(rotation_B)
+                        testing_array_A = testing_array_A[:, rotation_A]
+                        testing_array_B = testing_array_B[:, rotation_A]
+
+                    if self._zscore:
+                        big_raster = np.vstack([testing_array_A, testing_array_B])
+                        big_mean = np.nanmean(big_raster, 0)
+                        big_std = np.nanstd(big_raster, 0)
+                        big_std[big_std == 0] = np.inf
+                        testing_array_A = (testing_array_A - big_mean) / big_std
+                        testing_array_B = (testing_array_B - big_mean) / big_std
+
+                    vA = np.nanmean(testing_array_A, 0)
+                    vB = np.nanmean(testing_array_B, 0)
+                    coding_directions.append(vB - vA)
+
+        parallelism_scores = []
+        for i in range(len(coding_directions)):
+            for j in range(i + 1, len(coding_directions)):
+                if method == 'pearson':
+                    parallelism_scores.append(scipy.stats.pearsonr(coding_directions[i], coding_directions[j])[0])
+                elif method == 'cosine':
+                    parallelism_scores.append(cosine(coding_directions[i], coding_directions[j]))
+                elif method == 'spearman':
+                    parallelism_scores.append(scipy.stats.spearmanr(coding_directions[i], coding_directions[j])[0])
+                else:
+                    raise ValueError(
+                        "The specified method is not supported, please use one of: pearson, cosine, spearman")
+        if return_combinations:
+            return np.asarray(parallelism_scores)
+        else:
+            return np.nanmean(parallelism_scores)
+
+    # Dichotomy analysis functions with null model
 
     def decode_with_nullmodel(self, dichotomy: Union[str, list],
                               training_fraction: float,
@@ -853,7 +933,12 @@ class Decodanda:
 
         return data_performance, null_model_performances
 
-    def CCGP_with_nullmodel(self, dichotomy, resamplings=5, nshuffles=25, ndata: Optional[int] = None, max_semantic_dist=1, return_combinations=False):
+    def CCGP_with_nullmodel(self, dichotomy: Union[str, list],
+                            resamplings: int = 5,
+                            nshuffles: int = 25,
+                            ndata: Optional[int] = None,
+                            max_semantic_dist: int = 1,
+                            return_combinations: bool = False):
 
         """
                 Function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
@@ -945,7 +1030,8 @@ class Decodanda:
                 [0.44, 0.48, ..., 0.54] # 10 values
                 """
 
-        performances = self.CCGP_dichotomy(dichotomy=dichotomy, resamplings=resamplings, ndata=ndata, max_semantic_dist=max_semantic_dist)
+        performances = self.CCGP_dichotomy(dichotomy=dichotomy, resamplings=resamplings, ndata=ndata,
+                                           max_semantic_dist=max_semantic_dist)
 
         if return_combinations:
             ccgp = performances
@@ -972,7 +1058,35 @@ class Decodanda:
 
         return ccgp, shuffled_ccgp
 
-    # Analysis functions for semantic dichotomies
+    def PS_with_nullmodel(self, dichotomy: Union[str, list],
+                          nshuffles: int = 25,
+                          max_semantic_dist: int = 1,
+                          method: str = 'pearson',
+                          return_combinations: bool = False):
+
+        scores = self.parallelism_score_dichotomy(dichotomy=dichotomy,
+                                                  method=method,
+                                                  max_semantic_dist=max_semantic_dist,
+                                                  return_combinations=return_combinations)
+
+        if self._verbose and nshuffles:
+            print("\t\t[PS_with_nullmodel]\t\t----- Data: <p> = %.2f -----\n" % np.nanmean(scores))
+            count = tqdm(range(nshuffles))
+        else:
+            count = range(nshuffles)
+
+        shuffled_scores = []
+        for n in count:
+            scores_null = self.parallelism_score_dichotomy(dichotomy=dichotomy,
+                                                           method=method,
+                                                           max_semantic_dist=max_semantic_dist,
+                                                           return_combinations=return_combinations,
+                                                           shuffled=True)
+            shuffled_scores.append(scores_null)
+
+        return scores, shuffled_scores
+
+    # Decoding analysis for semantic dichotomies
 
     def decode(self, training_fraction: float,
                cross_validations: int = 10,
@@ -1042,7 +1156,7 @@ class Decodanda:
         plot:
             if True, a visualization of the decoding results is shown.
         ax:
-            if specified and ``plot=True``, the results will be duplayed in the specified axis instead of a new figure.
+            if specified and ``plot=True``, the results will be displayed in the specified axis instead of a new figure.
         plot_all:
             if True, a more in-depth visualization of the decoding results and of the decoded data is shown.
 
@@ -1129,9 +1243,12 @@ class Decodanda:
 
         return perfs, perfs_nullmodel
 
+    # Geometrical analysis for semantic dichotomies
+
     def CCGP(self, resamplings=5,
              nshuffles: int = 25,
              ndata: Optional[int] = None,
+             max_semantic_dist: int = 1,
              plot: bool = False,
              ax: Optional[plt.Axes] = None,
              **kwargs):
@@ -1158,6 +1275,10 @@ class Decodanda:
                 The number of data points (population vectors) sampled for training and for testing for each condition.
             max_semantic_dist:
                 The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+            plot:
+                if True, a visualization of the decoding results is shown.
+            ax:
+                if specified and ``plot=True``, the results will be displayed in the specified axis instead of a new figure.
 
         Returns
         -------
@@ -1213,7 +1334,7 @@ class Decodanda:
                                                              resamplings=resamplings,
                                                              nshuffles=nshuffles,
                                                              ndata=ndata,
-                                                             max_semantic_dist=1)
+                                                             max_semantic_dist=max_semantic_dist)
             ccgp[key] = data_ccgp
             ccgp_nullmodel[key] = null_ccgps
 
@@ -1223,6 +1344,34 @@ class Decodanda:
             plot_perfs_null_model(ccgp, ccgp_nullmodel, ylabel='CCGP', ax=ax, **kwargs)
 
         return ccgp, ccgp_nullmodel
+
+    def PS(self, nshuffles: int = 25,
+           max_semantic_dist: int = 1,
+           method: str = 'pearson',
+           plot: bool = False,
+           ax: Optional[plt.Axes] = None,
+           **kwargs):
+
+        semantic_dics, semantic_keys = self._find_semantic_dichotomies()
+
+        ps = {}
+        ps_nullmodel = {}
+        for key, dic in zip(semantic_keys, semantic_dics):
+            if self._verbose:
+                print("\nTesting PS for semantic dichotomy: ", key)
+            data_ps, null_ps = self.PS_with_nullmodel(dichotomy=dic,
+                                                      nshuffles=nshuffles,
+                                                      method=method,
+                                                      max_semantic_dist=max_semantic_dist)
+            ps[key] = data_ps
+            ps_nullmodel[key] = null_ps
+
+        if plot:
+            if not ax:
+                f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(semantic_dics), 3.5))
+            plot_perfs_null_model(ps, ps_nullmodel, ylabel='Parallelism Score', ax=ax, ylow=-1.05, yhigh=1.05, chance=0, **kwargs)
+
+        return ps, ps_nullmodel
 
     def semantic_score_geometry(self,
                                 training_fraction: float = 0.75,
@@ -1425,7 +1574,7 @@ class Decodanda:
                 def condition_no(cond):
                     no = 0
                     for i in range(len(cond)):
-                        no += cond[i]*10**(i+2)
+                        no += cond[i] * 10 ** (i + 2)
                     return no
 
                 if self._trial_attr is not None:
@@ -1547,7 +1696,7 @@ class Decodanda:
         powerset = list(chain.from_iterable(combinations(conditions, r) for r in range(1, len(conditions))))
         dichotomies = {}
         for i in range(len(powerset)):
-            for j in range(i+1, len(powerset)):
+            for j in range(i + 1, len(powerset)):
                 if len(np.unique(powerset[i] + powerset[j])) == len(conditions):
                     if len(powerset[i] + powerset[j]) == len(conditions):
                         dic = [list(powerset[i]), list(powerset[j])]
@@ -1683,7 +1832,8 @@ class Decodanda:
                     all_conditions = list(self._semantic_vectors.keys())
                     all_data = np.vstack([self.conditioned_rasters[cond][n] for cond in all_conditions])
                     all_trials = np.hstack([self.conditioned_trial_index[cond][n] for cond in all_conditions])
-                    all_n_trials = {cond: len(np.unique(self.conditioned_trial_index[cond][n])) for cond in all_conditions}
+                    all_n_trials = {cond: len(np.unique(self.conditioned_trial_index[cond][n])) for cond in
+                                    all_conditions}
 
                     unique_trials = np.unique(all_trials)
                     np.random.shuffle(unique_trials)
@@ -1872,9 +2022,10 @@ def _balance_two_decodandas(d1, d2, sampling_strategy='random'):
                 list(d2.conditioned_trial_index.values())[i][n] = list(d2.conditioned_trial_index.values())[i][n][
                     sampling]
 
-            print("Balancing data for d1: %u, d2: %u - now d1: %u, d2: %u" % (
-                t1, t2, list(d1.conditioned_rasters.values())[i][n].shape[0],
-                list(d2.conditioned_rasters.values())[i][n].shape[0]))
+            if d1._verbose:
+                print("Balancing data for d1: %u, d2: %u - now d1: %u, d2: %u" % (
+                    t1, t2, list(d1.conditioned_rasters.values())[i][n].shape[0],
+                    list(d2.conditioned_rasters.values())[i][n].shape[0]))
 
     for w in d1.conditioned_rasters.keys():
         d1.ordered_conditioned_rasters[w] = d1.conditioned_rasters[w].copy()
@@ -1914,7 +2065,7 @@ def _generate_binary_conditions(discrete_dict):
 
 
 def _powerchotomy_to_key(dic):
-    return '_'.join(dic[0])+'_v_'+'_'.join(dic[1])
+    return '_'.join(dic[0]) + '_v_' + '_'.join(dic[1])
 
 
 class _NullmodelIterator(object):  # necessary for parallelization of null model iterations
@@ -1944,4 +2095,3 @@ class _NullmodelIterator(object):  # necessary for parallelization of null model
             dec._order_conditioned_rasters()
 
         return perfs
-
