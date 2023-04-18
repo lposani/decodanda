@@ -1,3 +1,5 @@
+import numpy as np
+
 from .imports import *
 from .utilities import *
 
@@ -439,6 +441,80 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
                 elif hamming_distance(names[i], names[j]) == 2:
                     ax.plot([components[i][0], components[j][0]], [components[i][1], components[j][1]],
                             [components[i][2], components[j][2]], linestyle='--', color='k', alpha=0.3)
+        equalize_ax(ax)
+
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_zticklabels([])
+        return fig,
+
+    def animate(i):
+        ax.view_init(elev=10., azim=i * 2)
+        return fig,
+
+    if savename:
+        anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                       frames=360, interval=20, blit=True)
+        mywriter = animation.PillowWriter(fps=30)
+        anim.save(savename, writer=mywriter)
+    else:
+        init()
+    mpl.rcParams.update({'figure.autolayout': True})
+    return fig
+
+
+def visualize_balanced_MDS(dec, dim=3, savename=None, title='', data=None, null=None, names=None, axs=None):
+    # performance and CCGP
+
+    mpl.rcParams.update({'figure.autolayout': False})
+    rasters = []
+    labels = []
+    ndata =  dec._max_conditioned_data
+    for key in dec.conditioned_rasters:
+        X = sample_from_rasters(dec.conditioned_rasters[key], ndata)
+        rasters.append(X)
+        y = np.repeat(key, ndata)
+        labels.append(y)
+    X = np.vstack(rasters)
+    y = np.hstack(labels)
+    C = sklearn.decomposition.PCA(n_components=dim)
+    components = C.fit_transform(X, y)
+
+    if names is None:
+        names = list(dec._semantic_vectors.keys())
+
+    if data is not None and null is not None:
+        if axs is None:
+            fig = plt.figure(figsize=(12, 5))
+            G = GridSpec(12, 12)
+            ax = fig.add_subplot(G[:, 0:6], projection='3d')
+            ax_dec = fig.add_subplot(G[1:9, 6:9])
+            ax_ccgp = fig.add_subplot(G[1:9, 10:])
+        else:
+            ax = axs[0]
+            ax_dec = axs[1]
+            ax_ccgp = axs[2]
+            fig = ax.get_figure()
+
+        ax_dec.set_title(title)
+
+        plot_perfs_null_model(data['Decoding'], null['Decoding'], ax=ax_dec, marker='o')
+        plot_perfs_null_model(data['CCGP'], null['CCGP'], ax=ax_ccgp, ylabel='CCGP', marker='s')
+    else:
+        if axs is None:
+            fig = plt.figure(figsize=(6, 5))
+            ax = fig.add_subplot(projection='3d')
+        else:
+            ax = axs
+            fig = ax.get_figure()
+
+    plt.subplots_adjust(left=0, right=0.95, top=1, bottom=0)
+
+    def init():
+        for i in range(len(names)):
+            mask = (y == names[i])
+            ax.scatter(components[mask, 0], components[mask, 1], components[mask, 2], alpha=0.05, marker='o',
+                       s=20)
         equalize_ax(ax)
 
         ax.set_xticklabels([])
