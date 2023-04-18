@@ -463,13 +463,15 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
     return fig
 
 
-def visualize_balanced_MDS(dec, dim=3, savename=None, title='', data=None, null=None, names=None, axs=None):
+def visualize_balanced_MDS(dec, dim=3, ndata=None, savename=None, title='', data=None, null=None, names=None, axs=None):
     # performance and CCGP
 
     mpl.rcParams.update({'figure.autolayout': False})
     rasters = []
     labels = []
-    ndata =  dec._max_conditioned_data
+    if ndata is None:
+        ndata =  dec._max_conditioned_data
+
     for key in dec.conditioned_rasters:
         X = sample_from_rasters(dec.conditioned_rasters[key], ndata)
         rasters.append(X)
