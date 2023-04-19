@@ -14,6 +14,7 @@
 import copy
 from typing import Tuple, Union
 
+import numpy as np
 import scipy.stats.stats
 from numpy import ndarray
 from .imports import *
@@ -32,6 +33,7 @@ class Decodanda:
                  classifier: any = 'svc',
                  neural_attr: str = 'raster',
                  trial_attr: str = 'trial',
+                 squeeze_trials: bool = False,
                  min_data_per_condition: int = 2,
                  min_trials_per_condition: int = 2,
                  min_activations_per_cell: int = 1,
@@ -77,6 +79,10 @@ class Decodanda:
             during cross validation.
             If ``None``, trials are defined as consecutive bouts of data in time
             where all the variables have a constant value.
+
+        squeeze_trials
+            If True, all population vectors corresponding to the same trial number for the same
+            condition will be squeezed into a single average activity vector.
 
         min_data_per_condition
             The minimum number of data points per each condition, defined as a specific
@@ -226,6 +232,7 @@ class Decodanda:
         self._trial_attr = trial_attr
         self._trial_chunk = trial_chunk
         self._exclude_contiguous_trials = exclude_contiguous_chunks
+        self._trial_average = squeeze_trials
 
         # setting session(s) data
         self.n_sessions = len(data)
@@ -260,9 +267,6 @@ class Decodanda:
         #   >>> main part: create conditioned arrays <<< ---------------------------------
         self._divide_data_into_conditions(data)
         #  \ >>> main part: create conditioned arrays <<< --------------------------------
-
-        # if zscore:
-        #     self._zscore_activity()
 
         # raising exceptions
         if self.n_brains == 0:
@@ -1369,7 +1373,8 @@ class Decodanda:
         if plot:
             if not ax:
                 f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(semantic_dics), 3.5))
-            plot_perfs_null_model(ps, ps_nullmodel, ylabel='Parallelism Score', ax=ax, ylow=-1.05, yhigh=1.05, chance=0, **kwargs)
+            plot_perfs_null_model(ps, ps_nullmodel, ylabel='Parallelism Score', ax=ax, ylow=-1.05, yhigh=1.05, chance=0,
+                                  **kwargs)
 
         return ps, ps_nullmodel
 
@@ -1541,7 +1546,7 @@ class Decodanda:
             session_conditioned_rasters = {}
             session_conditioned_trial_index = {}
 
-            # exclude inactive neurons
+            # exclude inactive neurons across the specified conditions
             array = getattr(session, self._neural_attr)
             total_mask = np.zeros(len(array)) > 0
 
@@ -1599,6 +1604,19 @@ class Decodanda:
                     active_mask = np.sum(conditioned_raster, 1) > 0
                     conditioned_raster = conditioned_raster[active_mask, :]
                     conditioned_trial = conditioned_trial[active_mask]
+
+                # squeeze into trials
+                if self._trial_average:
+                    unique_trials = np.unique(conditioned_trial)
+                    squeezed_raster = []
+                    squeezed_trial_index = []
+                    for t in unique_trials:
+                        trial_raster = conditioned_raster[conditioned_trial == t]
+                        squeezed_raster.append(np.nanmean(trial_raster, 0))
+                        squeezed_trial_index.append(t)
+                    # set the new arrays
+                    conditioned_raster = np.asarray(squeezed_raster)
+                    conditioned_trial = np.asarray(squeezed_trial_index)
 
                 # set the conditioned neural data in the conditioned_rasters dictionary
                 session_conditioned_rasters[string_bool(condition_vec)] = conditioned_raster
