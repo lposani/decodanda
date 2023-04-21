@@ -391,7 +391,7 @@ class Decodanda:
             corr_scatter(selectivity_training, selectivity_testing, 'Selectivity (training)', 'Selectivity (testing)')
 
         if self._zscore:
-            big_raster = np.vstack([training_array_A, training_array_B, testing_array_A, testing_array_B])
+            big_raster = np.vstack([training_array_A, training_array_B])  # z-scoring using the training data
             big_mean = np.nanmean(big_raster, 0)
             big_std = np.nanstd(big_raster, 0)
             big_std[big_std == 0] = np.inf
@@ -702,8 +702,7 @@ class Decodanda:
                             testing_array_B = testing_array_B[:, rotation_A]
 
                         if self._zscore:
-                            big_raster = np.vstack(
-                                [training_array_A, training_array_B, testing_array_A, testing_array_B])
+                            big_raster = np.vstack([training_array_A, training_array_B])  # z-scoring using the training data
                             big_mean = np.nanmean(big_raster, 0)
                             big_std = np.nanstd(big_raster, 0)
                             big_std[big_std == 0] = np.inf
