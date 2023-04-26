@@ -136,7 +136,7 @@ def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding p
             ptext = p_to_text(pval).split('\n')[1]
             trans = transforms.blended_transform_factory(
                 ax.transData, ax.transAxes)
-            ax.text(i-0.22, 0.0,
+            ax.text(i - 0.22, 0.0,
                     'data=%.2f\nnull=%.2f$\pm$%.2f\n%s' %
                     (perfs[l], np.nanmean(perfs_nullmodel[l]), np.nanstd(perfs_nullmodel[l]), ptext),
                     va='bottom', ha='left', fontsize=7, backgroundcolor='1.00', transform=trans)
@@ -425,8 +425,8 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
             ax = axs
             fig = ax.get_figure()
 
-    #ax.grid(False)
-    #ax.set_axis_off()
+    # ax.grid(False)
+    # ax.set_axis_off()
     plt.subplots_adjust(left=0, right=0.95, top=1, bottom=0)
 
     def init():
@@ -464,16 +464,16 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
 
 
 def visualize_PCA(dec, dim=3,
-                           ndata=None, savename=None, title='',
-                           data=None, null=None, names=None, axs=None,
-                           alpha=None, z_score=False, mean=False, draw_hd2_lines=True):
+                  ndata=None, savename=None, title='',
+                  data=None, null=None, names=None, axs=None,
+                  alpha=None, z_score=False, mean=False, draw_hd2_lines=True):
     # performance and CCGP
 
     mpl.rcParams.update({'figure.autolayout': False})
     rasters = []
     labels = []
     if ndata is None:
-        ndata =  dec._max_conditioned_data
+        ndata = dec._max_conditioned_data
     if names is None:
         names = list(dec._semantic_vectors.keys())
 
@@ -486,15 +486,14 @@ def visualize_PCA(dec, dim=3,
     if z_score:
         for i in range(X.shape[1]):
             if np.nanstd(X[:, i]):
-                X[:, i] = (X[:, i] - np.nanmean(X[:, i]))/np.nanstd(X[:, i])
+                X[:, i] = (X[:, i] - np.nanmean(X[:, i])) / np.nanstd(X[:, i])
     y = np.hstack(labels)
     C = sklearn.decomposition.PCA(n_components=dim)
     components = C.fit_transform(X, y)
 
-
     means = []
     for name in names:
-        mask = y==name
+        mask = y == name
         means.append(np.median(components[mask, :], 0))
     means = np.asarray(means)
 
@@ -518,9 +517,9 @@ def visualize_PCA(dec, dim=3,
     else:
         if axs is None:
             fig = plt.figure(figsize=(6, 5))
-            if dim>=3:
+            if dim >= 3:
                 ax = fig.add_subplot(projection='3d')
-            if dim==2:
+            if dim == 2:
                 ax = fig.add_subplot()
         else:
             ax = axs
@@ -535,7 +534,7 @@ def visualize_PCA(dec, dim=3,
                 a = min(0.8, 40. / np.sum(mask))
             else:
                 a = alpha
-            if dim>=3:
+            if dim >= 3:
                 if not mean:
                     ax.scatter(components[mask, 0], components[mask, 1], components[mask, 2], alpha=a, marker='o',
                                s=20, label=dec._semantic_vectors[names[i]])
@@ -557,12 +556,12 @@ def visualize_PCA(dec, dim=3,
                                 ax.plot([means[i][0], means[j][0]], [means[i][1], means[j][1]],
                                         [means[i][2], means[j][2]], linestyle='--', color='k', alpha=0.3)
 
-                #equalize_ax(ax)
+                # equalize_ax(ax)
 
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 ax.set_zticklabels([])
-            if dim==2:
+            if dim == 2:
                 ax.scatter(components[mask, 0], components[mask, 1], alpha=a, marker='o',
                            s=20, label=dec._semantic_vectors[names[i]])
             if not mean:

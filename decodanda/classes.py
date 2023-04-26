@@ -21,7 +21,7 @@ from .imports import *
 from .utilities import generate_binary_words, string_bool, sample_training_testing_from_rasters, CrossValidator, \
     log_dichotomy, hamming, sample_from_rasters, generate_dichotomies, semantic_score, z_pval, DictSession, \
     contiguous_chunking, non_contiguous_mask, cosine
-from .visualize import corr_scatter, visualize_decoding, plot_perfs_null_model
+from .visualize import corr_scatter, visualize_decoding, plot_perfs_null_model, visualize_PCA
 
 
 # Main class
@@ -1528,7 +1528,12 @@ class Decodanda:
 
         return dichotomies_data, decoding_data, CCGP_data
 
-    # init utilities
+    # Utilities
+
+    def visualize_PCA(self, **kwargs):
+        visualize_PCA(self, **kwargs)
+
+    # __init__ utilities
 
     def _divide_data_into_conditions(self, sessions):
         # TODO: rename sessions into datasets?
