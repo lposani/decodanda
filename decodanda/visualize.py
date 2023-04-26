@@ -463,7 +463,10 @@ def visualize_decodanda_MDS(dec, dim=3, savename=None, title='', data=None, null
     return fig
 
 
-def visualize_balanced_MDS(dec, dim=3, ndata=None, savename=None, title='', data=None, null=None, names=None, axs=None):
+def visualize_PCA(dec, dim=3,
+                           ndata=None, savename=None, title='',
+                           data=None, null=None, names=None, axs=None,
+                           alpha=None, z_score=False, mean=False, draw_hd2_lines=True):
     # performance and CCGP
 
     mpl.rcParams.update({'figure.autolayout': False})
@@ -471,19 +474,29 @@ def visualize_balanced_MDS(dec, dim=3, ndata=None, savename=None, title='', data
     labels = []
     if ndata is None:
         ndata =  dec._max_conditioned_data
+    if names is None:
+        names = list(dec._semantic_vectors.keys())
 
-    for key in dec.conditioned_rasters:
+    for i, key in enumerate(dec.conditioned_rasters):
         X = sample_from_rasters(dec.conditioned_rasters[key], ndata)
         rasters.append(X)
-        y = np.repeat(key, ndata)
+        y = np.repeat(names[i], ndata)
         labels.append(y)
     X = np.vstack(rasters)
+    if z_score:
+        for i in range(X.shape[1]):
+            if np.nanstd(X[:, i]):
+                X[:, i] = (X[:, i] - np.nanmean(X[:, i]))/np.nanstd(X[:, i])
     y = np.hstack(labels)
     C = sklearn.decomposition.PCA(n_components=dim)
     components = C.fit_transform(X, y)
 
-    if names is None:
-        names = list(dec._semantic_vectors.keys())
+
+    means = []
+    for name in names:
+        mask = y==name
+        means.append(np.median(components[mask, :], 0))
+    means = np.asarray(means)
 
     if data is not None and null is not None:
         if axs is None:
@@ -505,7 +518,10 @@ def visualize_balanced_MDS(dec, dim=3, ndata=None, savename=None, title='', data
     else:
         if axs is None:
             fig = plt.figure(figsize=(6, 5))
-            ax = fig.add_subplot(projection='3d')
+            if dim>=3:
+                ax = fig.add_subplot(projection='3d')
+            if dim==2:
+                ax = fig.add_subplot()
         else:
             ax = axs
             fig = ax.get_figure()
@@ -515,13 +531,42 @@ def visualize_balanced_MDS(dec, dim=3, ndata=None, savename=None, title='', data
     def init():
         for i in range(len(names)):
             mask = (y == names[i])
-            ax.scatter(components[mask, 0], components[mask, 1], components[mask, 2], alpha=0.05, marker='o',
-                       s=20)
-        equalize_ax(ax)
+            if alpha is None:
+                a = min(0.8, 40. / np.sum(mask))
+            else:
+                a = alpha
+            if dim>=3:
+                if not mean:
+                    ax.scatter(components[mask, 0], components[mask, 1], components[mask, 2], alpha=a, marker='o',
+                               s=20, label=dec._semantic_vectors[names[i]])
+                else:
+                    for i in range(len(names)):
+                        ax.scatter(means[i, 0], means[i, 1], means[i, 2], alpha=0.7,
+                                   marker='$%s$' % names[i],
+                                   s=1000, color=pltcolors[i], edgecolor='w', linewidths=5)
+                        ax.scatter(means[i, 0], means[i, 1], means[i, 2], alpha=0.7,
+                                   marker='$%s$' % names[i],
+                                   s=1000, color=pltcolors[i])
+                    for i in range(len(names)):
+                        for j in range(i + 1, len(names)):
+                            if hamming_distance(names[i], names[j]) == 1:
+                                ax.plot([means[i][0], means[j][0]], [means[i][1], means[j][1]],
+                                        [means[i][2], means[j][2]], linestyle='-', linewidth=2, color='k',
+                                        alpha=0.7)
+                            elif (hamming_distance(names[i], names[j]) == 2) and draw_hd2_lines:
+                                ax.plot([means[i][0], means[j][0]], [means[i][1], means[j][1]],
+                                        [means[i][2], means[j][2]], linestyle='--', color='k', alpha=0.3)
 
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_zticklabels([])
+                #equalize_ax(ax)
+
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_zticklabels([])
+            if dim==2:
+                ax.scatter(components[mask, 0], components[mask, 1], alpha=a, marker='o',
+                           s=20, label=dec._semantic_vectors[names[i]])
+            if not mean:
+                plt.legend()
         return fig,
 
     def animate(i):
@@ -537,4 +582,3 @@ def visualize_balanced_MDS(dec, dim=3, ndata=None, savename=None, title='', data
         init()
     mpl.rcParams.update({'figure.autolayout': True})
     return fig
-
