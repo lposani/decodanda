@@ -6,16 +6,19 @@ from .imports import *
 
 # Classes
 
-
 class CrossValidator(object):
     # necessary for parallelization of cross validation repetitions
     # TODO: fix parallelization by fixing this
-    def __init__(self, classifier, conditioned_rasters, conditioned_trial_index, dic, training_fraction, ndata, subset,
-                 semantic_vectors):
+    def __init__(self, classifier, conditioned_rasters, conditioned_trial_index, dic,
+                 training_fraction, ndata, subset,
+                 semantic_vectors, dic_key, z_score):
+
         self.classifier = classifier
         self.conditioned_rasters = deepcopy(conditioned_rasters)
         self.conditioned_trial_index = deepcopy(conditioned_trial_index)
         self.dic = dic
+        self.dic_key = dic_key
+        self.z_score = z_score
         self.training_fraction = training_fraction
         self.ndata = ndata
         self.subset = subset
@@ -52,7 +55,11 @@ class CrossValidator(object):
         performance = self.classifier.score(testing_raster, testing_labels)
         return performance
 
-    def one_cv_step(self, dic, training_fraction, ndata):
+    def one_cv_step(self, dic, training_fraction, ndata, testing_trials=None):
+
+        if self.dic_key is None:
+            self.dic_key = compute_dic_key(dic)
+
         set_A = dic[0]
         label_A = ''
         for d in set_A:
@@ -70,20 +77,27 @@ class CrossValidator(object):
         testing_array_A = []
         testing_array_B = []
 
+        # allow for unbalanced dichotomies
+        n_conditions_A = float(len(dic[0]))
+        n_conditions_B = float(len(dic[1]))
+        fraction = n_conditions_A / n_conditions_B
+
         for d in set_A:
             training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
-                                                                     ndata,
+                                                                     int(ndata / fraction),
                                                                      training_fraction,
                                                                      self.conditioned_trial_index[d],
-                                                                     randomstate=self.randomstate)
+                                                                     testing_trials=testing_trials)
+
             training_array_A.append(training)
             testing_array_A.append(testing)
 
         for d in set_B:
             training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
-                                                                     ndata,
+                                                                     int(ndata),
                                                                      training_fraction,
-                                                                     self.conditioned_trial_index[d])
+                                                                     self.conditioned_trial_index[d],
+                                                                     testing_trials=testing_trials)
             training_array_B.append(training)
             testing_array_B.append(testing)
 
@@ -92,11 +106,23 @@ class CrossValidator(object):
         testing_array_A = np.vstack(testing_array_A)
         testing_array_B = np.vstack(testing_array_B)
 
-        self._train(training_array_A, training_array_B, label_A, label_B)
+        if self.z_score:
+            big_raster = np.vstack([training_array_A, training_array_B])  # z-scoring using the training data
+            big_mean = np.nanmean(big_raster, 0)
+            big_std = np.nanstd(big_raster, 0)
+            big_std[big_std == 0] = np.inf
+            training_array_A = (training_array_A - big_mean) / big_std
+            training_array_B = (training_array_B - big_mean) / big_std
+            testing_array_A = (testing_array_A - big_mean) / big_std
+            testing_array_B = (testing_array_B - big_mean) / big_std
 
-        performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
+        self.train(training_array_A, training_array_B, label_A, label_B)
 
-        return performance
+        performance = self.test(testing_array_A, testing_array_B, label_A, label_B)
+        weights = {}
+        if hasattr(self.classifier, 'coef_'):
+            weights[self.dic_key] = self.classifier.coef_
+        return [performance, weights]
 
 
 class DictSession:
@@ -659,6 +685,10 @@ def equalize_ax(ax):
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+
+def compute_dic_key(dic):
+    return '_'.join(dic[0]) + '_v_' + '_'.join(dic[1])
 
 
 def log_dichotomy(dec, dic, ndata, s='Decoding'):

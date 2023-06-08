@@ -529,15 +529,24 @@ class Decodanda:
 
         if parallel:
             pool = Pool()
-            performances = pool.map(CrossValidator(classifier=self.classifier,
-                                                   conditioned_rasters=self.conditioned_rasters,
-                                                   conditioned_trial_index=self.conditioned_trial_index,
-                                                   dic=dic,
-                                                   training_fraction=training_fraction,
-                                                   ndata=ndata,
-                                                   subset=self.subset,
-                                                   semantic_vectors=self._semantic_vectors),
-                                    range(cross_validations))
+            res = pool.map(CrossValidator(classifier=self.classifier,
+                                          conditioned_rasters=self.conditioned_rasters,
+                                          conditioned_trial_index=self.conditioned_trial_index,
+                                          dic=dic,
+                                          training_fraction=training_fraction,
+                                          ndata=ndata,
+                                          subset=self.subset,
+                                          semantic_vectors=self._semantic_vectors,
+                                          z_score=self._zscore,
+                                          dic_key=dic_key),
+                           range(cross_validations))
+            performances = np.asarray([r[0] for r in res])
+
+            if len(res[0][1]):
+                key = list(res[0][1].keys())[0]
+                weights = {key: [r[1][key] for r in res]}
+
+            print(performances, weights)
 
         else:
             performances = np.zeros(cross_validations)
@@ -555,7 +564,8 @@ class Decodanda:
                        resamplings: int = 3,
                        ndata: Optional[int] = None,
                        max_semantic_dist: int = 1,
-                       shuffled: bool = False):
+                       shuffled: bool = False,
+                       **kwargs):
         """
         Function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
         for a given variable, specified through its corresponding dichotomy. This function tests how well a given
@@ -702,7 +712,8 @@ class Decodanda:
                             testing_array_B = testing_array_B[:, rotation_A]
 
                         if self._zscore:
-                            big_raster = np.vstack([training_array_A, training_array_B])  # z-scoring using the training data
+                            big_raster = np.vstack(
+                                [training_array_A, training_array_B])  # z-scoring using the training data
                             big_mean = np.nanmean(big_raster, 0)
                             big_std = np.nanstd(big_raster, 0)
                             big_std[big_std == 0] = np.inf
@@ -791,7 +802,8 @@ class Decodanda:
                               return_CV: bool = False,
                               testing_trials: Optional[list] = None,
                               plot: bool = False,
-                              dic_key: Optional[str] = None) -> Tuple[Union[list, ndarray], ndarray]:
+                              dic_key: Optional[str] = None,
+                              **kwargs) -> Tuple[Union[list, ndarray], ndarray]:
         """
         Function that performs cross-validated decoding of a specific dichotomy and compares the resulting values with
         a null model where the relationship between the neural data and the two sides of the dichotomy is
@@ -926,7 +938,8 @@ class Decodanda:
                                                  ndata=ndata,
                                                  parallel=parallel,
                                                  testing_trials=testing_trials,
-                                                 shuffled=True)
+                                                 shuffled=True,
+                                                 dic_key=dic_key)
 
             null_model_performances[n] = np.nanmean(performances)
 
@@ -941,7 +954,8 @@ class Decodanda:
                             nshuffles: int = 25,
                             ndata: Optional[int] = None,
                             max_semantic_dist: int = 1,
-                            return_combinations: bool = False):
+                            return_combinations: bool = False,
+                            **kwargs):
 
         """
                 Function that performs the cross-condition generalization performance analysis (CCGP, Bernardi et al. 2020, Cell)
@@ -1065,7 +1079,8 @@ class Decodanda:
                           nshuffles: int = 25,
                           max_semantic_dist: int = 1,
                           method: str = 'pearson',
-                          return_combinations: bool = False):
+                          return_combinations: bool = False,
+                          **kwargs):
 
         scores = self.parallelism_score_dichotomy(dichotomy=dichotomy,
                                                   method=method,
@@ -1583,7 +1598,7 @@ class Decodanda:
                 def condition_no(cond):
                     no = 0
                     for i in range(len(cond)):
-                        no += cond[i] * 10 ** (i + 2)
+                        no += cond[i] * 10 ** (i + 3)
                     return no
 
                 if self._trial_attr is not None:
@@ -1632,9 +1647,12 @@ class Decodanda:
                         semantic_values = list(self.conditions[sk])
                         semantic_vector_string.append("%s = %s" % (sk, semantic_values[condition_vec[i]]))
                     semantic_vector_string = ', '.join(semantic_vector_string)
-                    print("\t\t\t(%s):\tSelected %u time bin out of %u, divided into %u trials "
-                          % (semantic_vector_string, conditioned_raster.shape[0], len(array),
-                             len(np.unique(conditioned_trial))))
+                    if len(conditioned_raster):
+                        print("\t\t\t(%s):\tSelected %u time bin out of %u, divided into %u trials - %u neurons"
+                              % (semantic_vector_string, conditioned_raster.shape[0], len(array),
+                                 len(np.unique(conditioned_trial)), conditioned_raster.shape[1]))
+                    else:
+                        print("\t\t\t(%s):\tNo data found" % semantic_vector_string)
 
             session_conditioned_data = [r.shape[0] for r in list(session_conditioned_rasters.values())]
             session_conditioned_trials = [len(np.unique(c)) for c in list(session_conditioned_trial_index.values())]
@@ -1913,6 +1931,10 @@ class Decodanda:
                     return False
         return True
 
+    def _reset_weight_arrays(self):
+        self.decoding_weights = {}
+        self.decoding_weights_null = {}
+
 
 # Wrapper for decoding
 
@@ -2102,10 +2124,14 @@ class _NullmodelIterator(object):  # necessary for parallelization of null model
         self.randomstate = RandomState(i)
         dec = Decodanda(data=self.data, conditions=self.conditions, **self.decodanda_params)
         semantic_dics, semantic_keys = dec._find_semantic_dichotomies()
-        if 'XOR' in self.analysis_params.keys():
-            if self.analysis_params['XOR'] and len(self.conditions) == 2:
+        if 'non_semantic' in self.analysis_params.keys():
+            if self.analysis_params['non_semantic'] and len(self.conditions) == 2:
                 semantic_dics.append([['01', '10'], ['00', '11']])
                 semantic_keys.append('XOR')
+            if self.analysis_params['non_semantic'] and len(self.conditions) > 2:
+                dics = dec.all_dichotomies(balanced=True)
+                semantic_dics = list(dics.values())
+                semantic_keys = list(dics.keys())
 
         perfs = {}
         for key, dic in zip(semantic_keys, semantic_dics):

@@ -34,7 +34,7 @@ def main(nshuffles):
         'cross_validations': 10,
         'training_fraction': 0.8,
         'nshuffles': nshuffles,
-        'XOR': True
+        'non_semantic': True
     }
 
     t0 = time.time()
@@ -43,7 +43,6 @@ def main(nshuffles):
     plt.title('Parallel, nshuffles=%u' % nshuffles)
 
     dt_par = time.time() - t0
-
 
     decodanda_params = {
         'verbose': False,
