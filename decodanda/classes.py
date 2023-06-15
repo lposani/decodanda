@@ -418,13 +418,16 @@ class Decodanda:
 
     # Sampling functions
 
-    def balanced_resample(self, ndata=None):
+    def balanced_resample(self, condition_names=False, ndata=None):
         """
 
         Parameters
         ----------
+        condition_names: if True, verbose names for conditions are used, otherwise a binary notation is used. Default: False.
+
         ndata: optional, number of resampled activity vectors per condition. If not specified,
         the maximum number of activity vectors across all conditions is used.
+
 
         Returns
         -------
@@ -435,7 +438,10 @@ class Decodanda:
 
         resampled_rasters = {}
         for key in self.conditioned_rasters:
-            condition_key = self._semantic_vectors[key]
+            if condition_names:
+                condition_key = self._semantic_vectors[key]
+            else:
+                condition_key = key
             resampled_rasters[condition_key] = []
             for n in range(self.n_brains):
                 x = self.conditioned_rasters[key][n]
@@ -1796,8 +1802,8 @@ class Decodanda:
             semantic_vector = '('
             for i, sk in enumerate(self._semantic_keys):
                 semantic_values = list(self.conditions[sk])
-                semantic_vector += semantic_values[condition_vec[i]]
-            semantic_vector = semantic_vector + ')'
+                semantic_vector += semantic_values[condition_vec[i]]+' '
+            semantic_vector = semantic_vector[:-1] + ')'
             self._semantic_vectors[string_bool(condition_vec)] = semantic_vector
 
     def _compute_centroids(self):
