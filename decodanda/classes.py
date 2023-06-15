@@ -419,6 +419,17 @@ class Decodanda:
     # Sampling functions
 
     def balanced_resample(self, ndata=None):
+        """
+
+        Parameters
+        ----------
+        ndata: optional, number of resampled activity vectors per condition. If not specified,
+        the maximum number of activity vectors across all conditions is used.
+
+        Returns
+        -------
+        balanced resampled rasters
+        """
         if ndata is None:
             ndata = self._max_conditioned_data
 
