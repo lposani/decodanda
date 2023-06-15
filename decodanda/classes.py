@@ -416,6 +416,24 @@ class Decodanda:
 
         return performance
 
+    # Sampling functions
+
+    def balanced_resample(self, ndata=None):
+        if ndata is None:
+            ndata = self._max_conditioned_data
+
+        resampled_rasters = {}
+        for key in self.conditioned_rasters:
+            condition_key = self._semantic_vectors[key]
+            resampled_rasters[condition_key] = []
+            for n in range(self.n_brains):
+                x = self.conditioned_rasters[key][n]
+                sampling_index = np.random.randint(0, x.shape[0], ndata)
+                resampled_rasters[condition_key].append(x[sampling_index])
+            resampled_rasters[condition_key] = np.hstack(resampled_rasters[condition_key])
+
+        return resampled_rasters
+
     # Dichotomy analysis functions
 
     def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,

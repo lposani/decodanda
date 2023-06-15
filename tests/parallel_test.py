@@ -52,7 +52,7 @@ def main(nshuffles):
         'cross_validations': 10,
         'training_fraction': 0.8,
         'nshuffles': nshuffles,
-        'XOR': True
+        'non_semantic': True
     }
 
     t0 = time.time()
