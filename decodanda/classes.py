@@ -418,7 +418,7 @@ class Decodanda:
 
     # Sampling functions
 
-    def balanced_resample(self, condition_names=False, ndata=None):
+    def balanced_resample(self, condition_names=False, ndata=None, z_score=None):
         """
 
         Parameters
@@ -428,6 +428,7 @@ class Decodanda:
         ndata: optional, number of resampled activity vectors per condition. If not specified,
         the maximum number of activity vectors across all conditions is used.
 
+        z_score: if True, the resampled rasters are z-scored with respect to all the conditions.
 
         Returns
         -------
@@ -435,6 +436,8 @@ class Decodanda:
         """
         if ndata is None:
             ndata = self._max_conditioned_data
+        if z_score is None:
+            z_score = self._zscore
 
         resampled_rasters = {}
         for key in self.conditioned_rasters:
@@ -448,6 +451,14 @@ class Decodanda:
                 sampling_index = np.random.randint(0, x.shape[0], ndata)
                 resampled_rasters[condition_key].append(x[sampling_index])
             resampled_rasters[condition_key] = np.hstack(resampled_rasters[condition_key])
+
+        if z_score:
+            for i in range(self.n_neurons):
+                big_x = np.hstack([r[:, i] for r in resampled_rasters.values()])
+                bigmean = np.nanmean(big_x)
+                bigstd = np.nanstd(big_x)
+                for key in resampled_rasters:
+                    resampled_rasters[key][:, i] = (resampled_rasters[key][:, i] - bigmean)/bigstd
 
         return resampled_rasters
 
