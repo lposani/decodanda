@@ -244,7 +244,7 @@ class Decodanda:
         self.which_brain = []
 
         # keys and stuff
-        self._condition_vectors = generate_binary_words(self.n_conditions)
+        self._condition_vectors = generate_binary_words(self.n_conditions)  # TODO change this for multimodal
         self._semantic_keys = list(self.conditions.keys())
         self._semantic_vectors = {string_bool(w): [] for w in generate_binary_words(self.n_conditions)}
         self._generate_semantic_vectors()
@@ -418,7 +418,7 @@ class Decodanda:
 
     # Sampling functions
 
-    def balanced_resample(self, condition_names=False, ndata=None, z_score=None):
+    def balanced_resample(self, condition_names=False, ndata=None, z_score=None, min_ar=0):
         """
 
         Parameters
@@ -429,6 +429,9 @@ class Decodanda:
         the maximum number of activity vectors across all conditions is used.
 
         z_score: if True, the resampled rasters are z-scored with respect to all the conditions.
+
+        min_ar: neurons below a minimum activity rate (fraction of bins with non-zero activity) threshold specified
+        by the ``min_ar`` parameter will be excluded from the sampled data.
 
         Returns
         -------
@@ -458,10 +461,80 @@ class Decodanda:
                 bigmean = np.nanmean(big_x)
                 bigstd = np.nanstd(big_x)
                 for key in resampled_rasters:
-                    resampled_rasters[key][:, i] = (resampled_rasters[key][:, i] - bigmean)/bigstd
+                    resampled_rasters[key][:, i] = (resampled_rasters[key][:, i] - bigmean) / bigstd
+
+        if min_ar:
+            X = np.vstack([resampled_rasters[key] for key in resampled_rasters])
+            activityrate = np.nanmean(X>0, 0)
+            for key in resampled_rasters:
+                resampled_rasters[key] = resampled_rasters[key][:, activityrate > min_ar]
 
         return resampled_rasters
 
+    def split_resample(self, fraction=0.5, condition_names=False, ndata=None, z_score=None, min_ar=0):
+        """
+
+        Parameters ----------
+
+        fraction: the fraction of trials used to sample from to fill the first data set (
+        raster_A). The remaining fraction (1-``fraction``) is used to sample the second data set (raster_B)
+
+        condition_names: if True, verbose names for conditions are used, otherwise a binary notation is used. Default: False.
+
+        ndata: optional, number of resampled activity vectors per condition. If not specified,
+        the maximum number of activity vectors across all conditions is used.
+
+        z_score: if True, the resampled rasters are z-scored with respect to all the conditions.
+
+        min_ar: neurons below a minimum activity rate (fraction of bins with non-zero activity) threshold specified
+        by the ``min_ar`` parameter will be excluded from the sampled data.
+
+        Returns
+        -------
+        rasters_A, rasters_B - dictionaries with resampled data for all conditions from different trials
+        """
+        if ndata is None:
+            ndata = self._max_conditioned_data
+        if z_score is None:
+            z_score = self._zscore
+
+        resampled_rasters_A = {}
+        resampled_rasters_B = {}
+
+        for key in self.conditioned_rasters:
+            if condition_names:
+                condition_key = self._semantic_vectors[key]
+            else:
+                condition_key = key
+            training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[key],
+                                                                     ndata=ndata,
+                                                                     training_fraction=fraction,
+                                                                     trials=self.conditioned_trial_index[key])
+            resampled_rasters_A[condition_key] = training
+            resampled_rasters_B[condition_key] = testing
+
+        if z_score:
+            for i in range(self.n_neurons):
+                big_x = np.hstack(
+                    [r[:, i] for r in resampled_rasters_A.values()] + [r[:, i] for r in resampled_rasters_B.values()])
+                bigmean = np.nanmean(big_x)
+                bigstd = np.nanstd(big_x)
+                for key in resampled_rasters_A:
+                    resampled_rasters_A[key][:, i] = (resampled_rasters_A[key][:, i] - bigmean) / bigstd
+                    resampled_rasters_B[key][:, i] = (resampled_rasters_B[key][:, i] - bigmean) / bigstd
+
+        if min_ar:
+            X = np.vstack(
+                [resampled_rasters_A[key] for key in resampled_rasters_A] + [resampled_rasters_B[key] for key in
+                                                                             resampled_rasters_B])
+            activityrate = np.nanmean(X > 0, 0)
+            for key in resampled_rasters_A:
+                resampled_rasters_A[key] = resampled_rasters_A[key][:, activityrate > min_ar]
+                resampled_rasters_B[key] = resampled_rasters_B[key][:, activityrate > min_ar]
+
+        return resampled_rasters_A, resampled_rasters_B
+
+    split_resample
     # Dichotomy analysis functions
 
     def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,
@@ -1592,7 +1665,8 @@ class Decodanda:
     # Utilities
 
     def visualize_PCA(self, **kwargs):
-        visualize_PCA(self, **kwargs)
+        C, means = visualize_PCA(self, **kwargs)
+        return C, means
 
     # __init__ utilities
 
@@ -1813,7 +1887,7 @@ class Decodanda:
             semantic_vector = '('
             for i, sk in enumerate(self._semantic_keys):
                 semantic_values = list(self.conditions[sk])
-                semantic_vector += semantic_values[condition_vec[i]]+' '
+                semantic_vector += semantic_values[condition_vec[i]] + ' '
             semantic_vector = semantic_vector[:-1] + ')'
             self._semantic_vectors[string_bool(condition_vec)] = semantic_vector
 

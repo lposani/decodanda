@@ -556,7 +556,7 @@ def visualize_PCA(dec, dim=3,
                                 ax.plot([means[i][0], means[j][0]], [means[i][1], means[j][1]],
                                         [means[i][2], means[j][2]], linestyle='--', color='k', alpha=0.3)
 
-                # equalize_ax(ax)
+                equalize_ax(ax)
 
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
@@ -566,7 +566,7 @@ def visualize_PCA(dec, dim=3,
                            s=20, label=dec._semantic_vectors[names[i]])
             if not mean:
                 plt.legend()
-        return fig,
+        return C, means
 
     def animate(i):
         ax.view_init(elev=10., azim=i * 2)
