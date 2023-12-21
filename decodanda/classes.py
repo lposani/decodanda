@@ -1771,6 +1771,108 @@ class Decodanda:
         else:
             return shattering_dim, perfs, nulls
 
+
+    def shattering_generalization(self,
+                                  nshuffles: int = 10,
+                                  ndata: Optional[int] = None,
+                                  p_threshold: float = 0.01,
+                                  visualize: bool = True,
+                                  semantic_names: Optional[dict] = None,
+                                  **kwargs):
+        """
+        This function computes shattering generalization defined as the number of balanced dichotomies that
+        have a above-chance CCGP.
+
+        Parameters
+        ----------
+        nshuffles:
+            the number of null-model iterations of the decoding procedure.
+        ndata:
+            the number of data points (population vectors) sampled for training and for testing for each condition.
+        p_threshold:
+            p-value threshold (z-score from the null model) to consider a performance as statistically significant.
+        visualize:
+            if ``True``, the decoding results are shown in a figure.
+
+
+        Returns
+        -------
+        shattering_gen:
+            shattering dimensionality
+        perfs:
+            dictionary of decoding performance per dichotomy
+        null:
+            dictionary of lists of null model values per dichotomy
+        """
+
+        all_dics_names, all_dics = generate_dichotomies(self.n_conditions)
+        semantic_overlap = []
+        dic_name = []
+        is_semantic = []
+        perfs = {}
+        nulls = {}
+
+        for i, dic in enumerate(all_dics):
+            semantic_overlap.append(semantic_score(dic))
+            is_semantic.append(str(self._dic_key(dic)))
+            dic_name.append(all_dics_names[i])
+        semantic_overlap = np.asarray(semantic_overlap)
+
+        # sorting dichotomies wrt semantic overlap
+        dic_name = np.asarray(dic_name)[np.argsort(semantic_overlap)[::-1]]
+        all_dics = list(np.asarray(all_dics)[np.argsort(semantic_overlap)[::-1]])
+        is_semantic = list(np.asarray(is_semantic)[np.argsort(semantic_overlap)[::-1]])
+        semantic_overlap = semantic_overlap[np.argsort(semantic_overlap)[::-1]]
+        semantic_overlap = (semantic_overlap - np.min(semantic_overlap)) / (
+                np.max(semantic_overlap) - np.min(semantic_overlap))
+
+        # CCGP for all dichotomies
+        for i, dic in tqdm(enumerate(all_dics)):
+            res, null = self.CCGP_with_nullmodel(dic, resamplings=2,
+                                                 nshuffles=nshuffles, ndata=ndata,
+                                                 max_semantic_dist=99)
+
+            perfs[dic_name[i]] = res
+            nulls[dic_name[i]] = null
+
+        ps = np.asarray([z_pval(perfs[dic_name[i]], nulls[dic_name[i]])[1] for i in range(len(dic_name))])
+        shattering_gen = np.nanmean(ps < p_threshold)
+
+        # plotting
+        if visualize:
+            f, ax = plt.subplots(figsize=(6, 3))
+            if self.n_conditions > 2:
+                ax.set_xlabel('Dichotomy (ordered by semantic score)')
+            else:
+                ax.set_xlabel('Dichotomy')
+
+            ax.set_ylabel('CCGP')
+            ax.axhline([0.5], color='k', linestyle='--', alpha=0.5)
+            ax.set_xticks([])
+            ax.set_ylim([0, 1.05])
+            sns.despine(f)
+
+            # visualize Decoding
+            for i in range(len(all_dics)):
+                if z_pval(perfs[dic_name[i]], nulls[dic_name[i]])[1] < 0.01:
+                    ax.scatter(i, perfs[dic_name[i]], marker='o',
+                               color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                               s=110, linewidth=2, linestyle='-')
+                else:
+                    ax.scatter(i, perfs[dic_name[i]], marker='o',
+                               color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='none',
+                               s=110, linewidth=0, linestyle='')
+                ax.errorbar(i, np.nanmean(nulls[dic_name[i]]), np.nanstd(nulls[dic_name[i]]), color='k', alpha=0.3)
+                if semantic_names is not None:
+                    if dic_name[i] in list(semantic_names.keys()):
+                        ax.text(i, max(0.61, perfs[dic_name[i]] + 0.06), semantic_names[dic_name[i]], rotation=90,
+                                fontsize=6, color='k',
+                                ha='center', fontweight='bold')
+
+            return shattering_gen, perfs, nulls, f
+        else:
+            return shattering_gen, perfs, nulls
+
     # Utilities
 
     def visualize_PCA(self, **kwargs):
