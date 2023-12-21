@@ -8,6 +8,7 @@ __pycache__/
 # Stuff to not commit
 backup
 ./debug.py
+publish.sh
 
 # C extensions
 *.so

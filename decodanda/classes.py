@@ -465,7 +465,7 @@ class Decodanda:
 
         if min_ar:
             X = np.vstack([resampled_rasters[key] for key in resampled_rasters])
-            activityrate = np.nanmean(X>0, 0)
+            activityrate = np.nanmean(X > 0, 0)
             for key in resampled_rasters:
                 resampled_rasters[key] = resampled_rasters[key][:, activityrate > min_ar]
 
@@ -535,6 +535,7 @@ class Decodanda:
         return resampled_rasters_A, resampled_rasters_B
 
     split_resample
+
     # Dichotomy analysis functions
 
     def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,
@@ -1661,6 +1662,114 @@ class Decodanda:
         CCGP_data = [CCGP_results, CCGP_null]
 
         return dichotomies_data, decoding_data, CCGP_data
+
+    def shattering_dimensionality(self,
+                                  training_fraction: float = 0.75,
+                                  cross_validations: int = 10,
+                                  nshuffles: int = 10,
+                                  ndata: Optional[int] = None,
+                                  p_threshold: float = 0.01,
+                                  visualize: bool = True,
+                                  semantic_names: Optional[dict] = None,
+                                  **kwargs):
+        """
+        This function computes shattering dimensionality as defined in Bernardi et al. 2020, i.e., as
+        the number of balanced dichotomies that a linear decoder can classify above chance levels.
+
+        Parameters
+        ----------
+        training_fraction:
+            the fraction of trials used for training in each cross-validation fold.
+        cross_validations:
+            the number of cross-validations.
+        nshuffles:
+            the number of null-model iterations of the decoding procedure.
+        ndata:
+            the number of data points (population vectors) sampled for training and for testing for each condition.
+        p_threshold:
+            p-value threshold (z-score from the null model) to consider a performance as statistically significant.
+        visualize:
+            if ``True``, the decoding results are shown in a figure.
+
+
+        Returns
+        -------
+        shattering_dim:
+            shattering dimensionality
+        perfs:
+            dictionary of decoding performance per dichotomy
+        null:
+            dictionary of lists of null model values per dichotomy
+        """
+
+        all_dics_names, all_dics = generate_dichotomies(self.n_conditions)
+        semantic_overlap = []
+        dic_name = []
+        is_semantic = []
+        perfs = {}
+        nulls = {}
+
+        for i, dic in enumerate(all_dics):
+            semantic_overlap.append(semantic_score(dic))
+            is_semantic.append(str(self._dic_key(dic)))
+            dic_name.append(all_dics_names[i])
+        semantic_overlap = np.asarray(semantic_overlap)
+
+        # sorting dichotomies wrt semantic overlap
+        dic_name = np.asarray(dic_name)[np.argsort(semantic_overlap)[::-1]]
+        all_dics = list(np.asarray(all_dics)[np.argsort(semantic_overlap)[::-1]])
+        is_semantic = list(np.asarray(is_semantic)[np.argsort(semantic_overlap)[::-1]])
+        semantic_overlap = semantic_overlap[np.argsort(semantic_overlap)[::-1]]
+        semantic_overlap = (semantic_overlap - np.min(semantic_overlap)) / (
+                np.max(semantic_overlap) - np.min(semantic_overlap))
+
+        # decoding all dichotomies
+        for i, dic in tqdm(enumerate(all_dics)):
+            res, null = self.decode_with_nullmodel(dic,
+                                                   training_fraction=training_fraction,
+                                                   cross_validations=cross_validations,
+                                                   nshuffles=nshuffles,
+                                                   ndata=ndata)
+            perfs[dic_name[i]] = res
+            nulls[dic_name[i]] = null
+
+        ps = np.asarray([z_pval(perfs[dic_name[i]], nulls[dic_name[i]])[1] for i in range(len(dic_name))])
+        shattering_dim = np.nanmean(ps < p_threshold)
+
+        # plotting
+        if visualize:
+            f, ax = plt.subplots(figsize=(6, 3))
+            if self.n_conditions > 2:
+                ax.set_xlabel('Dichotomy (ordered by semantic score)')
+            else:
+                ax.set_xlabel('Dichotomy')
+
+            ax.set_ylabel('Decoding Performance')
+            ax.axhline([0.5], color='k', linestyle='--', alpha=0.5)
+            ax.set_xticks([])
+            ax.set_ylim([0, 1.05])
+            sns.despine(f)
+
+            # visualize Decoding
+            for i in range(len(all_dics)):
+                if z_pval(perfs[dic_name[i]], nulls[dic_name[i]])[1] < 0.01:
+                    ax.scatter(i, perfs[dic_name[i]], marker='o',
+                               color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='k',
+                               s=110, linewidth=2, linestyle='-')
+                else:
+                    ax.scatter(i, perfs[dic_name[i]], marker='o',
+                               color=cm.cool(int(semantic_overlap[i] * 255)), edgecolor='none',
+                               s=110, linewidth=0, linestyle='')
+                ax.errorbar(i, np.nanmean(nulls[dic_name[i]]), np.nanstd(nulls[dic_name[i]]), color='k', alpha=0.3)
+                if semantic_names is not None:
+                    if dic_name[i] in list(semantic_names.keys()):
+                        ax.text(i, max(0.61, perfs[dic_name[i]] + 0.06), semantic_names[dic_name[i]], rotation=90,
+                                fontsize=6, color='k',
+                                ha='center', fontweight='bold')
+
+            return shattering_dim, perfs, nulls, f
+        else:
+            return shattering_dim, perfs, nulls
 
     # Utilities
 
