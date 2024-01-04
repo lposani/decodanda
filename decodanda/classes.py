@@ -534,22 +534,25 @@ class Decodanda:
 
         return resampled_rasters_A, resampled_rasters_B
 
-    split_resample
-
     # Dichotomy analysis functions
 
-    def decode_dichotomy(self, dichotomy: Union[str, list], training_fraction: float,
-                         cross_validations: int = 10, ndata: Optional[int] = None,
-                         shuffled: bool = False, parallel: bool = False,
+    def decode_dichotomy(self,
+                         dichotomy: Union[str, list],
+                         training_fraction: float,
+                         cross_validations: int = 10,
+                         ndata: Optional[int] = None,
+                         shuffled: bool = False,
+                         parallel: bool = False,
                          testing_trials: Optional[list] = None,
-                         dic_key: Optional[str] = None, **kwargs) -> ndarray:
+                         dic_key: Optional[str] = None,
+                         subsample: Optional[float] = 0,
+                         **kwargs) -> ndarray:
         """
         Function that performs cross-validated decoding of a specific dichotomy.
         Decoding is performed by sampling a balanced amount of data points from each condition in each class of the
         dichotomy, so to ensure that only the desired variable is analyzed by balancing confounds.
         Before sampling, each condition is individually divided into training and testing bins
         by using the ``self.trial`` array specified in the data structure when constructing the ``Decodanda`` object.
-
 
 
         Parameters
@@ -570,6 +573,8 @@ class Decodanda:
                 if specified, data sampled from the specified trial numbers will be used for testing, and the remaining ones for training.
             dic_key:
                 if specified, weights of the decoding analysis will be saved in self.decoding_weights using dic_key as the dictionary key.
+            subsample:
+                if >0, a random subsample of neurons of size=subsample will be used at each cross-validation
 
         Returns
         -------
@@ -648,6 +653,7 @@ class Decodanda:
             count = range(cross_validations)
 
         if parallel:
+            # TODO: add subsample to the parallel routine
             pool = Pool()
             res = pool.map(CrossValidator(classifier=self.classifier,
                                           conditioned_rasters=self.conditioned_rasters,
@@ -673,9 +679,13 @@ class Decodanda:
             if self._verbose and not shuffled:
                 print('\nLooping over decoding cross validation folds:')
             for i in count:
+                if subsample:
+                    self._generate_random_subset(subsample)
+
                 performances[i] = self._one_cv_step(dic=dic, training_fraction=training_fraction, ndata=ndata,
                                                     shuffled=shuffled, testing_trials=testing_trials, dic_key=dic_key)
-
+                if subsample:
+                    self._generate_random_subset(self.n_neurons)
         if shuffled:
             self._order_conditioned_rasters()
         return np.asarray(performances)
@@ -923,6 +933,7 @@ class Decodanda:
                               testing_trials: Optional[list] = None,
                               plot: bool = False,
                               dic_key: Optional[str] = None,
+                              subsample: Optional[int] = 0,
                               **kwargs) -> Tuple[Union[list, ndarray], ndarray]:
         """
         Function that performs cross-validated decoding of a specific dichotomy and compares the resulting values with
@@ -958,6 +969,8 @@ class Decodanda:
                 if True, a visualization of the decoding results is shown.
             dic_key:
                 if specified, weights of the decoding analysis will be saved in self.decoding_weights using dic_key as the dictionary key.
+            subsample:
+                if >0, a random subsample of neurons of size=subsample will be used at each cross-validation
 
 
         Returns
@@ -1035,7 +1048,8 @@ class Decodanda:
                                                ndata=ndata,
                                                parallel=parallel,
                                                testing_trials=testing_trials,
-                                               dic_key=dic_key)
+                                               dic_key=dic_key,
+                                               subsample=subsample)
         if return_CV:
             data_performance = d_performances
         else:
@@ -1059,7 +1073,8 @@ class Decodanda:
                                                  parallel=parallel,
                                                  testing_trials=testing_trials,
                                                  shuffled=True,
-                                                 dic_key=dic_key)
+                                                 dic_key=dic_key,
+                                                 subsample=subsample)
 
             null_model_performances[n] = np.nanmean(performances)
 
@@ -1230,6 +1245,7 @@ class Decodanda:
                cross_validations: int = 10,
                nshuffles: int = 10,
                ndata: Optional[int] = None,
+               subsample: Optional[int] = 0,
                parallel: bool = False,
                non_semantic: bool = False,
                return_CV: bool = False,
@@ -1283,6 +1299,8 @@ class Decodanda:
             the number of null-model iterations of the decoding procedure.
         ndata:
             the number of data points (population vectors) sampled for training and for testing for each condition.
+        subsample:
+            if >0, a random subsample of neurons of size=subsample will be used at each cross-validation
         parallel:
             if True, each cross-validation is performed by a dedicated thread (experimental, use with caution).
         return_CV:
@@ -1339,7 +1357,8 @@ class Decodanda:
                 parallel=parallel,
                 return_CV=return_CV,
                 testing_trials=testing_trials,
-                plot=plot_all)
+                plot=plot_all,
+                subsample=subsample)
 
             perfs[key] = performance
             perfs_nullmodel[key] = null_model_performances
@@ -1354,7 +1373,8 @@ class Decodanda:
                                                                    ndata=ndata,
                                                                    return_CV=return_CV,
                                                                    testing_trials=testing_trials,
-                                                                   plot=plot_all)
+                                                                   plot=plot_all,
+                                                                   subsample=subsample)
             perfs['XOR'] = perfs_xor
             perfs_nullmodel['XOR'] = perfs_null_xor
 
@@ -1370,7 +1390,8 @@ class Decodanda:
                                                                  ndata=ndata,
                                                                  return_CV=return_CV,
                                                                  testing_trials=testing_trials,
-                                                                 plot=plot_all)
+                                                                 plot=plot_all,
+                                                                 subsample=subsample)
                 perfs[dic_key] = perfs_dic
                 perfs_nullmodel[dic_key] = null_dic
 
