@@ -1689,6 +1689,7 @@ class Decodanda:
                                   cross_validations: int = 10,
                                   nshuffles: int = 10,
                                   ndata: Optional[int] = None,
+                                  subsample: Optional[int] = 0,
                                   p_threshold: float = 0.01,
                                   visualize: bool = True,
                                   semantic_names: Optional[dict] = None,
@@ -1707,6 +1708,8 @@ class Decodanda:
             the number of null-model iterations of the decoding procedure.
         ndata:
             the number of data points (population vectors) sampled for training and for testing for each condition.
+        subsample:
+            if >0, a random subsample of neurons of size=subsample will be used at each cross-validation.
         p_threshold:
             p-value threshold (z-score from the null model) to consider a performance as statistically significant.
         visualize:
@@ -1750,7 +1753,8 @@ class Decodanda:
                                                    training_fraction=training_fraction,
                                                    cross_validations=cross_validations,
                                                    nshuffles=nshuffles,
-                                                   ndata=ndata)
+                                                   ndata=ndata,
+                                                   subsample=subsample)
             perfs[dic_name[i]] = res
             nulls[dic_name[i]] = null
 
@@ -1791,7 +1795,6 @@ class Decodanda:
             return shattering_dim, perfs, nulls, f
         else:
             return shattering_dim, perfs, nulls
-
 
     def shattering_generalization(self,
                                   nshuffles: int = 10,
