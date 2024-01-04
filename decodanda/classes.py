@@ -641,7 +641,8 @@ class Decodanda:
             ndata = self._max_conditioned_data
         if ndata is None and self.n_brains > 1:
             ndata = max(self._max_conditioned_data, 2 * self.n_neurons)
-
+        if subsample:
+            self._generate_random_subset(subsample)
         if shuffled:
             self._shuffle_conditioned_arrays(dic)
 
