@@ -1399,7 +1399,7 @@ class Decodanda:
         if plot:
             if not ax:
                 f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(perfs.keys()), 3.5))
-            plot_perfs_null_model(perfs, perfs_nullmodel, ylabel='Decoding performance', ax=ax, **kwargs)
+            plot_perfs_null_model(perfs, perfs_nullmodel, ylabel='Decoding performance', ax=ax, marker='o', **kwargs)
 
         return perfs, perfs_nullmodel
 
@@ -1501,7 +1501,7 @@ class Decodanda:
         if plot:
             if not ax:
                 f, ax = plt.subplots(figsize=(0.5 + 1.8 * len(semantic_dics), 3.5))
-            plot_perfs_null_model(ccgp, ccgp_nullmodel, ylabel='CCGP', ax=ax, **kwargs)
+            plot_perfs_null_model(ccgp, ccgp_nullmodel, ylabel='CCGP', ax=ax, marker='s', **kwargs)
 
         return ccgp, ccgp_nullmodel
 
@@ -1901,8 +1901,8 @@ class Decodanda:
     # Utilities
 
     def visualize_PCA(self, **kwargs):
-        C, means = visualize_PCA(self, **kwargs)
-        return C, means
+        fig = visualize_PCA(self, **kwargs)
+        return fig
 
     # __init__ utilities
 

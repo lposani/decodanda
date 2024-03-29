@@ -22,6 +22,9 @@ from functools import partial
 from copy import deepcopy
 from numpy.random import RandomState
 
+# data reading stuff
+import h5py
+
 # visualization stuff
 import matplotlib as mpl
 mpl.rcParams.update({'figure.autolayout': True})
@@ -42,3 +45,4 @@ import matplotlib.transforms as transforms
 from typing import Union
 from typing import Optional
 from itertools import chain, combinations
+
