@@ -1598,7 +1598,7 @@ class Decodanda:
                                                    cross_validations=cross_validations,
                                                    nshuffles=nshuffles,
                                                    ndata=ndata)
-            print(i, res)
+            # print(i, res)
             decoding_results.append(res)
             decoding_null.append(null)
 
@@ -1606,12 +1606,12 @@ class Decodanda:
         CCGP_results = []
         CCGP_null = []
         for i, dic in enumerate(all_dics):
-            print(dic)
+            # print(dic)
             res, null = self.CCGP_with_nullmodel(dic,
                                                  nshuffles=nshuffles,
                                                  ndata=ndata,
                                                  max_semantic_dist=self.n_conditions)
-            print(i, res)
+            # print(i, res)
             CCGP_results.append(res)
             CCGP_null.append(null)
 
