@@ -346,25 +346,26 @@ def visualize_decoding(dec, dic, perfs, null, ndata=100, training_fraction=0.5, 
 
 
 # Session visualizations
-
-def visualize_raster(raster, ax='auto', offset=0, order=None, colors=None):
+def visualize_raster(raster, ax='auto', offset=0, order=None, colors=None, contrast=1.0):
     if order is None:
         order = np.arange(raster.shape[1], dtype=int)
     if colors is None:
         colors = np.zeros(raster.shape[1], dtype=int)
     if ax == 'auto':
-        f, ax = plt.subplots(figsize=(8, 5))
+        f, ax = plt.subplots(figsize=(12, 5))
         ax.set_xlabel('Time bin')
         ax.set_ylabel('Neuron index')
         ax.set_ylim([0, raster.shape[1]])
     for i in range(raster.shape[1]):
-        d = np.where(raster[:, order[i]] > 0)[0]
-        ax.plot(d + offset, np.ones(len(d)) * i, linestyle='', marker='|', markersize=200.0 / raster.shape[1],
-                alpha=0.8, color=pltcolors[colors[order[i]] - 1])
+        x = raster[:, order[i]]
+        d = np.where(x > 0)[0]
+        sizes = (x[d]/np.nanmax(x[d]))**contrast
+        ax.scatter(d + offset, np.ones(len(d)) * i, marker='|', s=600.0 / raster.shape[1],
+                alpha=sizes, color=mpl.colormaps['PuRd'](x[d]/np.nanmax(x[d])))
     return ax
 
 
-def visualize_session(session, neural_key='raster', other_keys='all'):
+def visualize_session(session, neural_key='raster', other_keys='all', contrast=1.0):
     if other_keys == 'all':
         keys = list(session.keys())
         keys.remove(neural_key)
@@ -375,7 +376,7 @@ def visualize_session(session, neural_key='raster', other_keys='all'):
     height_ratios = [4] + [1 for i in range(len(keys))]
     f, axs = plt.subplots(n_axs, 1, figsize=(10, 10), gridspec_kw={'height_ratios': height_ratios}, sharex=True)
     sns.despine(f)
-    visualize_raster(session[neural_key], ax=axs[0])
+    visualize_raster(session[neural_key], ax=axs[0], contrast=contrast)
     axs[0].set_title(neural_key)
 
     for i, key in enumerate(keys):
