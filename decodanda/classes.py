@@ -695,6 +695,7 @@ class Decodanda:
                        resamplings: int = 3,
                        ndata: Optional[int] = None,
                        max_semantic_dist: int = 1,
+                       split_rule='OneOut',
                        shuffled: bool = False,
                        **kwargs):
         """
@@ -713,6 +714,8 @@ class Decodanda:
                 The number of data points (population vectors) sampled for training and for testing for each condition.
             max_semantic_dist:
                 The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+            split_rule:
+                The way conditions are split in training and testing. OneOut (default), name of a variable, or dichotomy in the double-list binary format. If OneOut is used, one pair of conditions is held out and the rest is used to train the classifier; if a variable is specified, then CCGP is computed specifically across that variable, balancing any third (or further) variables during sampling.
             shuffled:
                 If True, the data is sampled according to geometrical null model for CCGP that keeps variables decodable but breaks the generalization. See Bernardi et al 2020 & Boyle, Posani et al. 2023.
 
@@ -804,60 +807,140 @@ class Decodanda:
             set_A = dic[0]
             set_B = dic[1]
 
-            for i in range(len(set_A)):
-                for j in range(len(set_B)):
-                    test_condition_A = set_A[i]
-                    test_condition_B = set_B[j]
+            if split_rule == 'OneOut':
+                # loop over all possible held-out pairs
+                for i in range(len(set_A)):
+                    for j in range(len(set_B)):
+                        test_condition_A = set_A[i]
+                        test_condition_B = set_B[j]
 
-                    if hamming(string_bool(test_condition_A), string_bool(test_condition_B)) <= max_semantic_dist:
-                        training_conditions_A = [x for iA, x in enumerate(set_A) if iA != i]
-                        training_conditions_B = [x for iB, x in enumerate(set_B) if iB != j]
+                        if hamming(string_bool(test_condition_A), string_bool(test_condition_B)) <= max_semantic_dist:
+                            training_conditions_A = [x for iA, x in enumerate(set_A) if iA != i]
+                            training_conditions_B = [x for iB, x in enumerate(set_B) if iB != j]
 
-                        training_array_A = []
-                        training_array_B = []
-                        label_A = ''
-                        label_B = ''
+                            training_array_A = []
+                            training_array_B = []
+                            label_A = ''
+                            label_B = ''
 
-                        for ck in training_conditions_A:
-                            arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
-                            training_array_A.append(arr)
-                            label_A += (self._semantic_vectors[ck] + ' ')
+                            for ck in training_conditions_A:
+                                arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                                training_array_A.append(arr)
+                                label_A += (self._semantic_vectors[ck] + ' ')
 
-                        for ck in training_conditions_B:
-                            arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
-                            training_array_B.append(arr)
-                            label_B += (self._semantic_vectors[ck] + ' ')
+                            for ck in training_conditions_B:
+                                arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                                training_array_B.append(arr)
+                                label_B += (self._semantic_vectors[ck] + ' ')
 
-                        training_array_A = np.vstack(training_array_A)
-                        training_array_B = np.vstack(training_array_B)
+                            training_array_A = np.vstack(training_array_A)
+                            training_array_B = np.vstack(training_array_B)
 
-                        testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A], ndata=ndata)
-                        testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B], ndata=ndata)
+                            testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A], ndata=ndata)
+                            testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B], ndata=ndata)
 
-                        if shuffled:
-                            rotation_A = np.arange(testing_array_A.shape[1]).astype(int)
-                            rotation_B = np.arange(testing_array_B.shape[1]).astype(int)
-                            np.random.shuffle(rotation_A)
-                            np.random.shuffle(rotation_B)
-                            testing_array_A = testing_array_A[:, rotation_A]
-                            testing_array_B = testing_array_B[:, rotation_A]
+                            if shuffled:
+                                rotation_A = np.arange(testing_array_A.shape[1]).astype(int)
+                                rotation_B = np.arange(testing_array_B.shape[1]).astype(int)
+                                np.random.shuffle(rotation_A)
+                                np.random.shuffle(rotation_B)
+                                testing_array_A = testing_array_A[:, rotation_A]
+                                testing_array_B = testing_array_B[:, rotation_A]
 
-                        if self._zscore:
-                            big_raster = np.vstack(
-                                [training_array_A, training_array_B])  # z-scoring using the training data
-                            big_mean = np.nanmean(big_raster, 0)
-                            big_std = np.nanstd(big_raster, 0)
-                            big_std[big_std == 0] = np.inf
-                            training_array_A = (training_array_A - big_mean) / big_std
-                            training_array_B = (training_array_B - big_mean) / big_std
-                            testing_array_A = (testing_array_A - big_mean) / big_std
-                            testing_array_B = (testing_array_B - big_mean) / big_std
+                            if self._zscore:
+                                big_raster = np.vstack(
+                                    [training_array_A, training_array_B])  # z-scoring using the training data
+                                big_mean = np.nanmean(big_raster, 0)
+                                big_std = np.nanstd(big_raster, 0)
+                                big_std[big_std == 0] = np.inf
+                                training_array_A = (training_array_A - big_mean) / big_std
+                                training_array_B = (training_array_B - big_mean) / big_std
+                                testing_array_A = (testing_array_A - big_mean) / big_std
+                                testing_array_B = (testing_array_B - big_mean) / big_std
 
-                        self._train(training_array_A, training_array_B, label_A, label_B)
-                        performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
-                        performances.append(performance)
+                            self._train(training_array_A, training_array_B, label_A, label_B)
+                            performance = self._test(testing_array_A, testing_array_B, label_A, label_B)
+                            performances.append(performance)
+
+            elif type(split_rule) == str:
+                split_dichotomy = self._dichotomy_from_key(split_rule)
+                training_conditions_A = [c for c in dic[0] if c in split_dichotomy[0]]
+                training_conditions_B = [c for c in dic[1] if c in split_dichotomy[0]]
+
+                testing_conditions_A = [c for c in dic[0] if c in split_dichotomy[1]]
+                testing_conditions_B = [c for c in dic[1] if c in split_dichotomy[1]]
+
+                training_array_A = []
+                training_array_B = []
+                label_A = ''
+                label_B = ''
+
+                for ck in training_conditions_A:
+                    arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                    training_array_A.append(arr)
+                    label_A += (self._semantic_vectors[ck] + ' ')
+
+                for ck in training_conditions_B:
+                    arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                    training_array_B.append(arr)
+                    label_B += (self._semantic_vectors[ck] + ' ')
+
+                training_array_A = np.vstack(training_array_A)
+                training_array_B = np.vstack(training_array_B)
+
+                if self._debug:
+                    print(f'CCGP: Training on {label_A} vs {label_B}')
+
+                testing_array_A = []
+                testing_array_B = []
+                label_A_test = ''
+                label_B_test = ''
+
+                for ck in testing_conditions_A:
+                    arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                    testing_array_A.append(arr)
+                    label_A_test += (self._semantic_vectors[ck] + ' ')
+
+                for ck in testing_conditions_B:
+                    arr = sample_from_rasters(self.conditioned_rasters[ck], ndata=ndata)
+                    testing_array_B.append(arr)
+                    label_B_test += (self._semantic_vectors[ck] + ' ')
+
+                testing_array_A = np.vstack(testing_array_A)
+                testing_array_B = np.vstack(testing_array_B)
+
+                if self._debug:
+                    print(f'CCGP: Testing on {label_A_test} vs {label_B_test}')
+
+                if shuffled:
+                    rotation_A = np.arange(testing_array_A.shape[1]).astype(int)
+                    rotation_B = np.arange(testing_array_B.shape[1]).astype(int)
+                    np.random.shuffle(rotation_A)
+                    np.random.shuffle(rotation_B)
+                    testing_array_A = testing_array_A[:, rotation_A]
+                    testing_array_B = testing_array_B[:, rotation_A]
+
+                if self._zscore:
+                    big_raster = np.vstack(
+                        [training_array_A, training_array_B])  # z-scoring using the training data
+                    big_mean = np.nanmean(big_raster, 0)
+                    big_std = np.nanstd(big_raster, 0)
+                    big_std[big_std == 0] = np.inf
+                    training_array_A = (training_array_A - big_mean) / big_std
+                    training_array_B = (training_array_B - big_mean) / big_std
+                    testing_array_A = (testing_array_A - big_mean) / big_std
+                    testing_array_B = (testing_array_B - big_mean) / big_std
+
+                self._train(training_array_A, training_array_B, label_A, label_B)
+                performance1 = self._test(testing_array_A, testing_array_B, label_A, label_B)
+
+                self._train(testing_array_A, testing_array_B, label_A, label_B)
+                performance2 = self._test(training_array_A, training_array_B, label_A, label_B)
+
+                performances = [performance1, performance2]
 
             all_performances.append(performances)
+
         return np.nanmean(all_performances, 0)
 
     def parallelism_score_dichotomy(self, dichotomy: Union[str, list],
