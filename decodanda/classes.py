@@ -1173,6 +1173,7 @@ class Decodanda:
                             nshuffles: int = 25,
                             ndata: Optional[int] = None,
                             max_semantic_dist: int = 1,
+                            split_rule='OneOut',
                             return_combinations: bool = False,
                             **kwargs):
 
@@ -1198,6 +1199,8 @@ class Decodanda:
                         The number of data points (population vectors) sampled for training and for testing for each condition.
                     max_semantic_dist:
                         The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+                    split_rule:
+                        The way conditions are split in training and testing. OneOut (default), name of a variable, or dichotomy in the double-list binary format. If OneOut is used, one pair of conditions is held out and the rest is used to train the classifier; if a variable is specified, then CCGP is computed specifically across that variable, balancing any third (or further) variables during sampling.
                     return_combinations:
                         If True, returns all the individual performances for cross-conditions train-test splits, otherwise returns the average over combinations.
 
@@ -1267,7 +1270,7 @@ class Decodanda:
                 """
 
         performances = self.CCGP_dichotomy(dichotomy=dichotomy, resamplings=resamplings, ndata=ndata,
-                                           max_semantic_dist=max_semantic_dist)
+                                           max_semantic_dist=max_semantic_dist, split_rule=split_rule)
 
         if return_combinations:
             ccgp = performances
@@ -1286,6 +1289,7 @@ class Decodanda:
                                                resamplings=resamplings,
                                                ndata=ndata,
                                                max_semantic_dist=max_semantic_dist,
+                                               split_rule=split_rule,
                                                shuffled=True)
             if return_combinations:
                 shuffled_ccgp.append(performances)
@@ -1492,6 +1496,7 @@ class Decodanda:
              nshuffles: int = 25,
              ndata: Optional[int] = None,
              max_semantic_dist: int = 1,
+             split_rule='OneOut',
              plot: bool = False,
              ax: Optional[plt.Axes] = None,
              **kwargs):
@@ -1518,6 +1523,8 @@ class Decodanda:
                 The number of data points (population vectors) sampled for training and for testing for each condition.
             max_semantic_dist:
                 The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
+            split_rule:
+                The way conditions are split in training and testing. OneOut (default), name of a variable, or dichotomy in the double-list binary format. If OneOut is used, one pair of conditions is held out and the rest is used to train the classifier; if a variable is specified, then CCGP is computed specifically across that variable, balancing any third (or further) variables during sampling.
             plot:
                 if True, a visualization of the decoding results is shown.
             ax:
@@ -1577,7 +1584,8 @@ class Decodanda:
                                                              resamplings=resamplings,
                                                              nshuffles=nshuffles,
                                                              ndata=ndata,
-                                                             max_semantic_dist=max_semantic_dist)
+                                                             max_semantic_dist=max_semantic_dist,
+                                                             split_rule=split_rule)
             ccgp[key] = data_ccgp
             ccgp_nullmodel[key] = null_ccgps
 
