@@ -209,6 +209,13 @@ class Decodanda:
                 dict_sessions.append(DictSession(session))
             data = dict_sessions
 
+        # check whether conditions are binary
+        for key in conditions:
+            if len(conditions[key]) != 2:
+                raise RuntimeError(
+                    f"\n[Decodanda] In this version of Decodanda, variables should be binary\n "
+                    f"Variable {key} has {len(conditions[key])} values. Please check the conditions dictionary.")
+
         # handling discrete dict conditions
         if type(list(conditions.values())[0]) == list:
             conditions = _generate_binary_conditions(conditions)
@@ -836,8 +843,10 @@ class Decodanda:
                             training_array_A = np.vstack(training_array_A)
                             training_array_B = np.vstack(training_array_B)
 
-                            testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A], ndata=ndata)
-                            testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B], ndata=ndata)
+                            testing_array_A = sample_from_rasters(self.conditioned_rasters[test_condition_A],
+                                                                  ndata=ndata)
+                            testing_array_B = sample_from_rasters(self.conditioned_rasters[test_condition_B],
+                                                                  ndata=ndata)
 
                             if shuffled:
                                 rotation_A = np.arange(testing_array_A.shape[1]).astype(int)
@@ -1496,7 +1505,6 @@ class Decodanda:
              nshuffles: int = 25,
              ndata: Optional[int] = None,
              max_semantic_dist: int = 1,
-             split_rule='OneOut',
              plot: bool = False,
              ax: Optional[plt.Axes] = None,
              **kwargs):
@@ -1506,7 +1514,7 @@ class Decodanda:
         for the variables specified through the ``conditions`` dictionary.
 
         It returns a single ccgp value per variable which represents the average over
-        all cross-condition train-test splits.
+        all cross-condition train-test splits. This function uses split_rule='OneOut' as a default.
 
         It also returns an array of null-model values for each variable to test the significance of
         the corresponding ccgp result. The employed geometrical null model keeps variables decodable but randomly
@@ -1523,8 +1531,6 @@ class Decodanda:
                 The number of data points (population vectors) sampled for training and for testing for each condition.
             max_semantic_dist:
                 The maximum semantic distance (number of variables that change value) between conditions in the held-out pair used to test the classifier.
-            split_rule:
-                The way conditions are split in training and testing. OneOut (default), name of a variable, or dichotomy in the double-list binary format. If OneOut is used, one pair of conditions is held out and the rest is used to train the classifier; if a variable is specified, then CCGP is computed specifically across that variable, balancing any third (or further) variables during sampling.
             plot:
                 if True, a visualization of the decoding results is shown.
             ax:
@@ -1584,8 +1590,7 @@ class Decodanda:
                                                              resamplings=resamplings,
                                                              nshuffles=nshuffles,
                                                              ndata=ndata,
-                                                             max_semantic_dist=max_semantic_dist,
-                                                             split_rule=split_rule)
+                                                             max_semantic_dist=max_semantic_dist)
             ccgp[key] = data_ccgp
             ccgp_nullmodel[key] = null_ccgps
 
@@ -1896,7 +1901,7 @@ class Decodanda:
                                   semantic_names: Optional[dict] = None,
                                   **kwargs):
         """
-        This function computes shattering generalization defined as the number of balanced dichotomies that
+        [WIP] This function computes shattering generalization defined as the number of balanced dichotomies that
         have a above-chance CCGP.
 
         Parameters
