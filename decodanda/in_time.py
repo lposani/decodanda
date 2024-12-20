@@ -1,7 +1,7 @@
 from .classes import Decodanda, _generate_binary_conditions
-from .visualize import line_with_shade
 from .imports import *
 from .utilities import p_to_ast, z_pval
+from .visualize import line_with_shade
 
 
 def decode_in_time(data, conditions, time_attr, time_window, decodanda_params, decoding_params, time_boundaries,

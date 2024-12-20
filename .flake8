@@ -1,0 +1,40 @@
+[flake8]
+max-line-length = 127
+max-complexity = 26
+count = False
+color = always
+show_source = False
+statistics = False
+format = html
+ignore =
+    ANN101,
+    ANN102,
+    ANN204,
+    ANN401,
+    ANN002,
+    ANN003,
+    W503,
+    W605,
+    TRY003
+htmldir = linting
+unused-arguments-ignore-stub-functions = True
+unused-arguments-ignore-dunder = True
+unused-arguments-ignore-variadic-names = True
+exclude =
+    .git,
+    .github,
+    .pytest_cache,
+    htmlcov,
+    __pycache__,
+    docs/source/conf.py,
+    build,
+    dist,
+    tests,
+    lib,
+    Lib,
+    libs,
+    Library,
+    include,
+    conda-meta,
+    Scripts,
+    Tools,
