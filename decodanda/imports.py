@@ -1,48 +1,42 @@
 # standard stuff
-import types
-from math import ceil, floor
-import scipy.stats
-
-# matrix stuff
-import numpy as np
 import itertools
-import pandas as pd
-from scipy.spatial.distance import cdist
-
-# learning stuff
-import sklearn
-from scipy.stats import pearsonr
-from scipy.stats import ttest_1samp
-from scipy.stats import linregress
-from sklearn.svm import LinearSVC
-
+import types
+from copy import deepcopy
+from functools import partial
+from math import ceil, floor
 # parallelization stuff
 from multiprocessing import Pool
-from functools import partial
-from copy import deepcopy
-from numpy.random import RandomState
 
 # data reading stuff
 import h5py
-
 # visualization stuff
 import matplotlib as mpl
+# matrix stuff
+import numpy as np
+import pandas as pd
+import scipy.stats
+# learning stuff
+import sklearn
+from numpy.random import RandomState
+from scipy.spatial.distance import cdist
+from scipy.stats import linregress, pearsonr, ttest_1samp
+from sklearn.svm import LinearSVC
+
 mpl.rcParams.update({'figure.autolayout': True})
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+
 pltcolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 pltcolors = pltcolors * 100
-import seaborn as sns
-from sklearn.manifold import MDS
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import animation
-from scipy.spatial.distance import mahalanobis
-from tqdm import tqdm
 import datetime
-from matplotlib import cm
-from scipy.stats import special_ortho_group
-import matplotlib.transforms as transforms
-from typing import Union
-from typing import Optional
 from itertools import chain, combinations
+from typing import Optional, Union
 
+import matplotlib.transforms as transforms
+import seaborn as sns
+from matplotlib import animation, cm
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.spatial.distance import mahalanobis
+from scipy.stats import special_ortho_group
+from sklearn.manifold import MDS
+from tqdm import tqdm

@@ -18,11 +18,14 @@ import numpy as np
 import scipy.stats.stats
 from numpy import ndarray
 from .imports import *
-from .utilities import generate_binary_words, string_bool, sample_training_testing_from_rasters, CrossValidator, \
-    log_dichotomy, hamming, sample_from_rasters, generate_dichotomies, semantic_score, z_pval, DictSession, \
-    contiguous_chunking, non_contiguous_mask, cosine
-from .visualize import corr_scatter, visualize_decoding, plot_perfs_null_model, visualize_PCA
-
+from .utilities import (CrossValidator, DictSession, contiguous_chunking,
+                        cosine, generate_binary_words, generate_dichotomies,
+                        hamming, log_dichotomy, non_contiguous_mask,
+                        sample_from_rasters,
+                        sample_training_testing_from_rasters, semantic_score,
+                        string_bool, z_pval)
+from .visualize import (corr_scatter, plot_perfs_null_model,
+                        visualize_decoding, visualize_PCA)
 
 # Main class
 
