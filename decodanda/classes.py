@@ -423,6 +423,79 @@ class Decodanda:
 
         return performance
 
+    def _one_X_cv_step(self, dic1, dic2, training_fraction, ndata, shuffled=False):
+        # Training rasters
+        training_set_A = dic1[0]
+        training_set_B = dic1[1]
+        testing_set_A = dic2[0]
+        testing_set_B = dic2[1]
+
+        training_array_A = []
+        training_array_B = []
+        testing_array_A = []
+        testing_array_B = []
+
+        # allow for unbalanced dichotomies
+        n_conditions_A = float(len(dic1[0]))
+        n_conditions_B = float(len(dic1[1]))
+        fraction = n_conditions_A / n_conditions_B
+
+        for d in training_set_A:
+            training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
+                                                                     int(ndata / fraction),
+                                                                     training_fraction,
+                                                                     self.conditioned_trial_index[d],
+                                                                     debug=self._debug)
+            if self._debug:
+                plt.title('Condition A')
+                print("Sampling for condition A, d=%s" % d)
+                print("Conditioned raster mean:")
+                print(np.nanmean(self.conditioned_rasters[d][0], 0))
+
+            training_array_A.append(training)
+            if d in testing_set_A:
+                testing_array_A.append(testing)
+            elif d in testing_set_B:
+                testing_array_B.append(testing)
+
+        for d in training_set_B:
+            training, testing = sample_training_testing_from_rasters(self.conditioned_rasters[d],
+                                                                     int(ndata),
+                                                                     training_fraction,
+                                                                     self.conditioned_trial_index[d],
+                                                                     debug=self._debug)
+            training_array_B.append(training)
+            if d in testing_set_A:
+                testing_array_A.append(testing)
+            elif d in testing_set_B:
+                testing_array_B.append(testing)
+
+        training_array_A = np.vstack(training_array_A)
+        training_array_B = np.vstack(training_array_B)
+        testing_array_A = np.vstack(testing_array_A)
+        testing_array_B = np.vstack(testing_array_B)
+
+        if self._debug:
+            selectivity_training = np.nanmean(training_array_A, 0) - np.nanmean(training_array_B, 0)
+            selectivity_testing = np.nanmean(testing_array_A, 0) - np.nanmean(testing_array_B, 0)
+            corr_scatter(selectivity_training, selectivity_testing, 'Selectivity (training)', 'Selectivity (testing)')
+
+        if self._zscore:
+            big_raster = np.vstack([training_array_A, training_array_B])  # z-scoring using the training data
+            big_mean = np.nanmean(big_raster, 0)
+            big_std = np.nanstd(big_raster, 0)
+            big_std[big_std == 0] = np.inf
+            training_array_A = (training_array_A - big_mean) / big_std
+            training_array_B = (training_array_B - big_mean) / big_std
+            testing_array_A = (testing_array_A - big_mean) / big_std
+            testing_array_B = (testing_array_B - big_mean) / big_std
+
+        self._train(training_array_A, training_array_B, 'A', 'B')
+
+        performance = self._test(testing_array_A, testing_array_B, 'A', 'B')
+
+        return performance
+
     # Sampling functions
 
     def balanced_resample(self, condition_names=False, ndata=None, z_score=None, min_ar=0):
@@ -897,8 +970,8 @@ class Decodanda:
                 training_array_A = np.vstack(training_array_A)
                 training_array_B = np.vstack(training_array_B)
 
-                if self._debug:
-                    print(f'CCGP: Training on {label_A} vs {label_B}')
+                if self._verbose:
+                    print(f'\nCCGP: Training on {label_A} vs {label_B}')
 
                 testing_array_A = []
                 testing_array_B = []
@@ -918,7 +991,7 @@ class Decodanda:
                 testing_array_A = np.vstack(testing_array_A)
                 testing_array_B = np.vstack(testing_array_B)
 
-                if self._debug:
+                if self._verbose:
                     print(f'CCGP: Testing on {label_A_test} vs {label_B_test}')
 
                 if shuffled:
@@ -1994,6 +2067,59 @@ class Decodanda:
         else:
             return shattering_gen, perfs, nulls
 
+    def CVI(self, training_fraction: float = 0.75,
+            cross_validations: int = 10,
+            nshuffles: int = 10,
+            ndata: Optional[int] = None,
+            return_splits: bool = False,
+            signed=False
+            ):
+        if ndata is None:
+            ndata = 2 * self._max_conditioned_data
+
+        dics, vars = self._find_semantic_dichotomies()
+        # data
+        results = {}
+        for v1 in range(len(vars)):
+            var1 = vars[v1]
+            dic1 = dics[v1]
+            for v2 in range(len(vars)):
+                if v2 != v1:
+                    var2 = vars[v2]
+                    dic2 = dics[v2]
+                    results[f'{var1}-{var2}'] = []
+                    for k in range(cross_validations):
+                        perf = self._one_X_cv_step(dic1, dic2, training_fraction, ndata)
+                        results[f'{var1}-{var2}'].append(perf)
+                    if signed:
+                        results[f'{var1}-{var2}'] = np.nanmean(np.asarray(results[f'{var1}-{var2}']))
+                    else:
+                        results[f'{var1}-{var2}'] = 0.5 + np.abs(
+                            np.nanmean(np.asarray(results[f'{var1}-{var2}']) - 0.5))
+        # null
+        null = {key: [] for key in results}
+        for n in range(nshuffles):
+            self._shuffle_conditioned_arrays(dic='XOR')
+            for v1 in range(len(vars)):
+                var1 = vars[v1]
+                dic1 = dics[v1]
+                for v2 in range(len(vars)):
+                    if v2 != v1:
+                        var2 = vars[v2]
+                        dic2 = dics[v2]
+                        null_n = []
+                        for k in range(cross_validations):
+                            perf = self._one_X_cv_step(dic1, dic2, training_fraction, ndata)
+                            null_n.append(perf)
+                        null[f'{var1}-{var2}'].append(np.nanmean(null_n))
+            self._order_conditioned_rasters()
+        if not return_splits:
+            megakey = '-'.join(vars)
+            results_combined = {megakey: np.nanmean([results[key] for key in results])}
+            null_combined = {megakey: [np.nanmean([null[key][i] for key in null]) for i in range(nshuffles)]}
+            return results_combined, null_combined
+        return results, null
+
     # Utilities
 
     def visualize_PCA(self, **kwargs):
@@ -2078,7 +2204,7 @@ class Decodanda:
 
                 # squeeze into trials
                 if self._trial_average:
-                    unique_trials = np.unique(conditioned_trial)
+                    unique_trials = np.unique(conditioned_trial[~np.isnan(conditioned_trial)])
                     squeezed_raster = []
                     squeezed_trial_index = []
                     for t in unique_trials:

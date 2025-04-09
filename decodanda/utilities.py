@@ -776,7 +776,7 @@ def visualize_data_vs_null(data, null, value, ax=None):
         ax.text(0.15, 0.95, '%s\nz=%.1f\nP=%.1e' % (p_to_ast(p), z, p), ha='center', transform=ax.transAxes)
 
     ax.plot(null, np.zeros(len(null)), linestyle='', marker='|', color='k')
-    _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)], color='k', linestyle='--')
+    _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)[0]], color='k', linestyle='--')
     return z, p
 
 
