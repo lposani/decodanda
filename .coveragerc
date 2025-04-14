@@ -1,0 +1,27 @@
+[run]
+branch = True
+command_line = -m pytest
+omit = */tests/*
+dynamic_context = test_function
+
+[report]
+fail_under = 75
+exclude_also =
+    def __repr__,
+    def __name__,
+    def __del__,
+    if __name__ == .__main__.:,
+    if TYPE_CHECKING:,
+    raise NotImplementedError,
+    except ImportError,
+    @(abc\\.)?abstractmethod,
+    @(abc\\.)?abstractproperty,
+    @(abc\\.)?abstractclassmethod,
+    @(abc\\.)?abstractstaticmethod
+
+[json]
+pretty_print = True
+
+[html]
+show_contexts = True
+directory = coverage
