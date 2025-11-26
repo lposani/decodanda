@@ -101,7 +101,7 @@ def setup_decoding_axis(ax, labels, ylow=0.4, yhigh=1.0, null=0.5):
     sns.despine(ax=ax)
 
 
-def plot_perfs_null_model(perfs, perfs_nullmodel, marker='d', ylabel='Decoding performance', ax=None, shownull=False,
+def plot_perfs_null_model(perfs, perfs_nullmodel, marker='o', ylabel='Decoding performance', ax=None, shownull=False,
                           chance=0.5, setup=True, ptype='z', annotate=True, ylow=0.27, yhigh=1.02, **kwargs):
     labels = list(perfs.keys())
     pvals = {}

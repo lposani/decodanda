@@ -14,7 +14,7 @@ import sklearn
 from scipy.stats import pearsonr
 from scipy.stats import ttest_1samp
 from scipy.stats import linregress
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 
 # parallelization stuff
 from multiprocessing import Pool

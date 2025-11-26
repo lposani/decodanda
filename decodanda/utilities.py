@@ -455,7 +455,7 @@ def delete_silent_bins(array):
     return array[mask, :]
 
 
-def string_bool(x):
+def string_digits(x):
     if (type(x) == str) or (type(x) == np.str_):
         values = []
         for s in x:
@@ -477,24 +477,43 @@ def generate_binary_words(n):
     return np.asarray(words)
 
 
+def generate_words(conditions):
+    """
+    conditions: dict[var_name -> dict[value_name -> predicate]]
+
+    Returns:
+        words: np.ndarray of shape (n_combinations, n_variables)
+               where each column is an integer code for that variable's value.
+               The order of variables is list(conditions.keys()).
+    """
+    var_names = list(conditions.keys())
+    n_levels_per_var = [len(conditions[var]) for var in var_names]
+
+    # cartesian product over indices for each variable
+    index_ranges = [range(n) for n in n_levels_per_var]
+    words = list(itertools.product(*index_ranges))
+
+    return np.asarray(words, dtype=int)
+
+
 def generate_dichotomies(n):
     words = generate_binary_words(n)
     dy_words = generate_binary_words(2 ** n)
     dichotomies = []
     sets = []
     for w in dy_words:
-        string_w = string_bool(w)
-        string_not_w = string_bool((w == 0).astype(int))
+        string_w = string_digits(w)
+        string_not_w = string_digits((w == 0).astype(int))
         if (np.sum(w) == np.sum(w == 0)) and (string_not_w not in dichotomies):
             dichotomies.append(string_w)
-            set_A = [string_bool(x) for x in words[w > 0]]
-            set_B = [string_bool(x) for x in words[w == 0]]
+            set_A = [string_digits(x) for x in words[w > 0]]
+            set_B = [string_digits(x) for x in words[w == 0]]
             sets.append([set_A, set_B])
     return dichotomies, sets
 
 
 def semantic_score(dic):
-    d = [string_bool(x) for x in dic[0]]
+    d = [string_digits(x) for x in dic[0]]
     fingerprint = np.abs(np.sum(d, 0) - len(d) / 2)
     return np.max(fingerprint) * np.sum(fingerprint)
 
@@ -508,7 +527,7 @@ def hamming_distance(x, y):
 
 def hamming(x, y):
     if type(x) == str:
-        return np.sum((np.asarray(string_bool(x)) == np.asarray(string_bool(y))) == 0)
+        return np.sum((np.asarray(string_digits(x)) == np.asarray(string_digits(y))) == 0)
     else:
         return np.sum((np.asarray(x) == np.asarray(y)) == 0)
 
@@ -778,6 +797,90 @@ def visualize_data_vs_null(data, null, value, ax=None):
     ax.plot(null, np.zeros(len(null)), linestyle='', marker='|', color='k')
     _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)[0]], color='k', linestyle='--')
     return z, p
+
+# CM viz
+
+def plot_confusion_matrix(cm,
+                          labels=None,
+                          normalize: bool = False,
+                          ax=None,
+                          cmap='viridis',
+                          fontsize=10):
+    from matplotlib.colors import Normalize
+
+    """
+    Pretty confusion-matrix plot with values in each cell.
+
+    Parameters
+    ----------
+    cm : array-like, shape (n_classes, n_classes)
+        Confusion matrix (counts).
+    labels : list of str, optional
+        Class labels in the order used to build `cm`.
+    normalize : bool
+        If True, normalize rows to sum to 1.
+    ax : matplotlib.axes.Axes, optional
+        Axis to plot on. If None, a new figure/axis is created.
+    cmap : str
+        Matplotlib colormap name.
+    fontsize : int
+        Font size for numbers and tick labels.
+    """
+    cm = np.asarray(cm).astype(float)
+    if normalize:
+        row_sums = cm.sum(axis=1, keepdims=True)
+        row_sums[row_sums == 0] = 1.0
+        cm_display = cm / row_sums
+    else:
+        cm_display = cm
+
+    n_classes = cm.shape[0]
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(4 + 0.3 * n_classes,
+                                        4 + 0.3 * n_classes))
+
+    im = ax.imshow(cm_display, interpolation='nearest', cmap=cmap,
+                   norm=Normalize(vmin=0, vmax=cm_display.max()))
+
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    if labels is None:
+        labels = [str(i) for i in range(n_classes)]
+
+    ax.set_xticks(np.arange(n_classes))
+    ax.set_yticks(np.arange(n_classes))
+    ax.set_xticklabels(labels, fontsize=fontsize)
+    ax.set_yticklabels(labels, fontsize=fontsize)
+
+    ax.set_xlabel('Predicted', fontsize=fontsize + 1)
+    ax.set_ylabel('True', fontsize=fontsize + 1)
+
+    # Rotate x tick labels
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+
+    # Print values in each cell
+    thresh = cm_display.max() / 2.0 if cm_display.size else 0.0
+    for i in range(n_classes):
+        for j in range(n_classes):
+            if normalize:
+                val = cm_display[i, j]
+                text = f"{val:.2f}"
+            else:
+                val = cm[i, j]
+                text = f"{int(val)}"
+
+            ax.text(j, i, text,
+                    ha='center', va='center',
+                    fontsize=fontsize,
+                    color='white' if cm_display[i, j] < thresh else 'black')
+
+    ax.set_xlim(-0.5, n_classes - 1 + 0.5)
+    ax.set_ylim(n_classes - 1 + 0.5, -0.5)
+    ax.grid(False)
+    ax.spines[:].set_visible(False)
+
+    return ax
 
 
 # Histogram comparison

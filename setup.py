@@ -2,7 +2,14 @@ from setuptools import setup, find_packages
 
 VERSION = '0.7.3'
 DESCRIPTION = 'Geometric decoding of neural data with built-in best practices.'
-LONG_DESCRIPTION = 'Decodanda (dog latin for "to be decoded") is a best-practices-made-easy Python package for decoding neural data. Decodanda is designed to expose a user-friendly and flexible interface for population activity decoding, with a series of built-in best practices to avoid the most common pitfalls. In addition, Decodanda exposes a series of functions to compute the Cross-Condition Generalization Performance (CCGP, Bernardi et al. 2020) for the geometrical analysis of neural population activity.'
+LONG_DESCRIPTION = '''
+Decodanda (dog latin for "to be decoded") is a best-practices-made-easy Python package for decoding neural data.
+Decodanda is designed to expose a user-friendly and flexible interface for population activity decoding,
+with a series of built-in best practices to avoid the most common pitfalls.
+In addition, Decodanda exposes a series of functions to compute the Cross-Condition Generalization Performance (CCGP,
+Bernardi et al. 2020) and Cross-Variable Interference (O'Neill et al 2025) 
+for the geometrical analysis of neural population activity.
+'''
 
 setup(
     name="decodanda",
