@@ -11,9 +11,9 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
 project = 'decodanda'
-copyright = '2024, Lorenzo Posani'
+copyright = '2025, Lorenzo Posani'
 author = 'Lorenzo Posani'
-release = '0.7.2'
+release = '0.8.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
