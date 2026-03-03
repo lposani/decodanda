@@ -21,7 +21,7 @@ from numpy import ndarray
 from .imports import *
 from .utilities import generate_binary_words, string_digits, sample_training_testing_from_rasters, CrossValidator, \
     log_dichotomy, hamming, sample_from_rasters, generate_dichotomies, semantic_score, z_pval, DictSession, \
-    contiguous_chunking, non_contiguous_mask, cosine, generate_words, plot_confusion_matrix
+    contiguous_chunking, non_contiguous_mask, cosine, generate_words, plot_confusion_matrix, enforce_min_time_separation
 from .visualize import corr_scatter, visualize_decoding, plot_perfs_null_model, visualize_PCA
 
 
@@ -38,6 +38,8 @@ class Decodanda:
                  min_data_per_condition: int = 2,
                  min_trials_per_condition: int = 2,
                  min_activations_per_cell: int = 1,
+                 min_time_separation: Optional[float] = None,
+                 time_attr: Optional[str] = None,
                  trial_chunk: Optional[int] = None,
                  exclude_contiguous_chunks: bool = False,
                  exclude_silent: bool = False,
@@ -98,6 +100,15 @@ class Decodanda:
         min_activations_per_cell
             The minimum number of non-zero bins that single neurons / features need to have to be
             included into the analysis.
+
+        min_time_separation
+            The minimum time difference, computed using ``time_attr``, between data assigned to different trial numbers.
+            This prevents signals with long autocorrelations (e.g., calcium activity) from spilling over between
+            training and testing trials.
+
+        time_attr
+            Name of the session field/attribute containing the time vector (one value per sample/bin),
+            used to compute ``min_time_separation``.
 
         trial_chunk
             Only used when ``trial_attr=None``. The maximum number of consecutive data points
@@ -243,6 +254,8 @@ class Decodanda:
         self._neural_attr = neural_attr
         self._trial_attr = trial_attr
         self._trial_chunk = trial_chunk
+        self._min_time_separation = min_time_separation
+        self._time_attr = time_attr
         self._exclude_contiguous_trials = exclude_contiguous_chunks
         self._trial_average = squeeze_trials
 
@@ -254,6 +267,8 @@ class Decodanda:
         self.n_neurons = 0
         self.n_brains = 0
         self.which_brain = []
+        self._time_separation_masks = []
+        self._session_trial_vectors = []
 
         # keys and stuff
         self._condition_vectors = generate_words(self.conditions)
@@ -1274,7 +1289,7 @@ class Decodanda:
                                           shuffled=False)
         perf_null = []
         cm_null = []
-        for n in range(nshuffles):
+        for n in tqdm(range(nshuffles)):
             perfs_n, cm_n = self.decode_multiclass(classes=classes,
                                                    training_fraction=training_fraction,
                                                    cross_validations=cross_validations,
@@ -2369,7 +2384,6 @@ class Decodanda:
 
     def _divide_data_into_conditions(self, sessions):
         # TODO: rename sessions into datasets?
-        # TODO: make sure conditions don't overlap somehow
 
         for si, session in enumerate(sessions):
 
@@ -2384,17 +2398,61 @@ class Decodanda:
 
             # exclude inactive neurons across the specified conditions
             array = getattr(session, self._neural_attr)
-            total_mask = np.zeros(len(array)) > 0
+            T = array.shape[0]
 
-            for condition_vec in self._condition_vectors:
-                mask = np.ones(len(array)) > 0
+            total_mask = np.zeros(T, dtype=bool)
+            cond_of_bin = np.full(T, -1.0, dtype=float)
+            local_trial_of_bin = np.full(T, -1.0, dtype=float)
+
+            for ci, condition_vec in enumerate(self._condition_vectors):
+                mask = np.ones(T, dtype=bool)
                 for i, sk in enumerate(self._semantic_keys):
                     semantic_values = list(self.conditions[sk])
                     mask_i = self.conditions[sk][semantic_values[condition_vec[i]]](session)
-                    mask = mask & mask_i
-                total_mask = total_mask | mask
+                    mask &= mask_i
+                total_mask |= mask
 
-            min_activity_mask = np.sum(array[total_mask] != 0, 0) >= self._min_activations_per_cell
+                if not np.any(mask):
+                    continue
+
+                # local trials
+                if self._trial_attr is not None:
+                    local_trials = np.asarray(getattr(session, self._trial_attr))[mask]
+                else:
+                    if self._trial_chunk is None:
+                        local_trials = contiguous_chunking(mask)[mask].astype(float)
+                    else:
+                        local_trials = contiguous_chunking(mask, self._trial_chunk)[mask].astype(float)
+                local_trials[np.isnan(local_trials)] = -1.0
+
+                # overlap check (assigned bins are those with cond_of_bin != -1)
+                if np.any(cond_of_bin[mask] != -1.0):
+                    raise ValueError("Conditions overlap in time; cannot build a unique session-wide trial vector.")
+
+                cond_of_bin[mask] = float(ci)
+                local_trial_of_bin[mask] = local_trials
+
+            # factorize (ci, local_trial) -> global id
+            valid = (cond_of_bin != -1.0) & (local_trial_of_bin != -1.0)
+            pairs = np.stack([cond_of_bin[valid], local_trial_of_bin[valid]], axis=1)
+
+            _, inv = np.unique(pairs, axis=0, return_inverse=True)
+
+            session_trial_vector = np.full(T, -1.0, dtype=float)
+            session_trial_vector[valid] = inv.astype(float)
+
+            if self._time_attr is not None:
+                time_vector = getattr(session, self._time_attr)
+                time_separation_mask = enforce_min_time_separation(session_trial_vector, self._min_time_separation, time_vector)
+                if self._debug:
+                    print('[Enforcing time separation] selected %u time bin over %u total time bins' % (np.sum(time_separation_mask), np.sum(total_mask)))
+            else:
+                time_separation_mask = np.ones(T, dtype=bool)
+
+            self._time_separation_masks.append(time_separation_mask)
+            self._session_trial_vectors.append(session_trial_vector)
+
+            min_activity_mask = np.sum(array[total_mask & time_separation_mask] != 0, 0) >= self._min_activations_per_cell
 
             for condition_vec in self._condition_vectors:
                 # get the array from the session object
@@ -2402,38 +2460,19 @@ class Decodanda:
                 array = array[:, min_activity_mask]
 
                 # create a mask that becomes more and more restrictive by iterating on semanting conditions
-                mask = np.ones(len(array)) > 0
+                mask = np.ones(T, dtype=bool)
                 for i, sk in enumerate(self._semantic_keys):
                     semantic_values = list(self.conditions[sk])
                     mask_i = self.conditions[sk][semantic_values[condition_vec[i]]](session)
                     mask = mask & mask_i
 
+                mask = mask & time_separation_mask
+
                 # select bins conditioned on the semantic behavioural vector
                 conditioned_raster = array[mask, :]
 
-                # Define trial logic
-                def condition_no(cond):
-                    no = 0
-                    for i in range(len(cond)):
-                        no += cond[i] * 10 ** (i + 3)
-                    return no
-
-                if self._trial_attr is not None:
-                    conditioned_trial = getattr(session, self._trial_attr)[mask]
-                elif self._trial_chunk is None:
-                    if self._verbose:
-                        print('[Decodanda]\tUsing contiguous chunks of the same labels as trials.')
-                    conditioned_trial = contiguous_chunking(mask)[mask]
-                    conditioned_trial += condition_no(condition_vec)
-                else:
-                    conditioned_trial = contiguous_chunking(mask, self._trial_chunk)[mask]
-                    conditioned_trial += condition_no(condition_vec)
-
-                if self._exclude_contiguous_trials:
-                    contiguous_chunks = contiguous_chunking(mask)[mask]
-                    nc_mask = non_contiguous_mask(contiguous_chunks, conditioned_trial)
-                    conditioned_raster = conditioned_raster[nc_mask, :]
-                    conditioned_trial = conditioned_trial[nc_mask]
+                # select trial numbers
+                conditioned_trial = session_trial_vector[mask]
 
                 # exclude empty time bins (only for binary discrete decoding)
                 if self._exclude_silent:
@@ -2443,7 +2482,7 @@ class Decodanda:
 
                 # squeeze into trials
                 if self._trial_average:
-                    unique_trials = np.unique(conditioned_trial[~np.isnan(conditioned_trial)])
+                    unique_trials = np.unique(conditioned_trial[conditioned_trial != -1.0])
                     squeezed_raster = []
                     squeezed_trial_index = []
                     for t in unique_trials:

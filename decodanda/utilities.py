@@ -360,7 +360,8 @@ def training_test_block_masks(T, training_fraction, trials, randomstate=None, de
     unique_trial_numbers = np.unique(trials)
     nutn = len(unique_trial_numbers)
     if testing_trials is None:
-        if (nutn * (1. - training_fraction)) <= 1:  # in the case of very small number of trials, use all but one for training
+        if (nutn * (
+                1. - training_fraction)) <= 1:  # in the case of very small number of trials, use all but one for training
             if randomstate is None:
                 testing_trials = unique_trial_numbers[np.random.choice(nutn, size=1, replace=False)]
             else:
@@ -460,7 +461,7 @@ def string_digits(x):
         values = []
         for s in x:
             values.append(bool(int(s)))
-    elif (type(x) == list) or (type(x)==type(np.zeros(10))):
+    elif (type(x) == list) or (type(x) == type(np.zeros(10))):
         values = ''
         for s in x:
             values += str(s)
@@ -518,7 +519,152 @@ def semantic_score(dic):
     return np.max(fingerprint) * np.sum(fingerprint)
 
 
+import numpy as np
+
+def enforce_min_time_separation(trial_vector, min_time, time_vector, weight="n_trials"):
+    """
+    Enforce a minimum time separation between *distinct trial segments*.
+
+    Robust to user-provided trial_attr being "weird":
+    - trial ids may repeat in multiple discontiguous segments -> treated as separate segments
+    - NaNs (or -1) indicate invalid/unassigned bins and split segments
+    - trial ids need not be contiguous or sorted in time
+
+    Parameters
+    ----------
+    trial_vector : array-like, shape (T,)
+        Trial id per bin. Can be int (use -1 for invalid) or float (use NaN for invalid).
+    min_time : float
+        Minimum required time gap between the end of one kept segment and the start of the next kept segment.
+        If <= 0, keeps all valid bins.
+    time_vector : array-like, shape (T,)
+        Time for each bin, aligned to trial_vector. Monotonic increasing recommended.
+    weight : {"n_trials", "n_bins", "duration"}
+        - "n_trials": keep as many segments as possible (minimize deletions). (default)
+        - "n_bins": keep as many bins as possible.
+        - "duration": keep as much time coverage as possible (end-start per segment).
+
+    Returns
+    -------
+    keep_mask : np.ndarray of bool, shape (T,)
+        True for bins that belong to kept segments.
+    """
+    tv = np.asarray(trial_vector)
+    t = np.asarray(time_vector)
+
+    if tv.ndim != 1 or t.ndim != 1 or tv.shape[0] != t.shape[0]:
+        raise ValueError("enforce_min_time_separation: trial_vector and time_vector must be 1D and same length.")
+
+    # Define invalid bins: NaN (if float) or -1 (common int sentinel)
+    if np.issubdtype(tv.dtype, np.floating):
+        valid = ~np.isnan(tv)
+        tv_int = np.empty_like(tv, dtype=int)
+        tv_int[valid] = tv[valid].astype(int)
+        tv_int[~valid] = -1
+        tv = tv_int
+    else:
+        valid = tv != -1
+
+    if min_time is None or min_time <= 0:
+        return valid.copy()
+    if not np.any(valid):
+        return np.zeros_like(valid, dtype=bool)
+
+    # Build contiguous segments in TIME ORDER.
+    # A segment is a maximal run of valid bins with constant trial id.
+    seg_id = np.full(tv.shape[0], -1, dtype=int)
+    seg_start_t = []
+    seg_end_t = []
+    seg_bins = []
+
+    current_seg = -1
+    prev_trial = None
+    prev_valid = False
+
+    for i in range(tv.shape[0]):
+        if not valid[i]:
+            prev_valid = False
+            prev_trial = None
+            continue
+
+        ti = int(tv[i])
+        if (not prev_valid) or (ti != prev_trial):
+            current_seg += 1
+            seg_start_t.append(float(t[i]))
+            seg_end_t.append(float(t[i]))
+            seg_bins.append(1)
+        else:
+            seg_end_t[current_seg] = float(t[i])
+            seg_bins[current_seg] += 1
+
+        seg_id[i] = current_seg
+        prev_valid = True
+        prev_trial = ti
+
+    nseg = current_seg + 1
+    if nseg <= 1:
+        return valid.copy()
+
+    seg_start_t = np.asarray(seg_start_t, dtype=float)
+    seg_end_t = np.asarray(seg_end_t, dtype=float)
+    seg_bins = np.asarray(seg_bins, dtype=int)
+
+    # Objective weights per segment
+    if weight == "n_trials":
+        w = np.ones(nseg, dtype=int)
+    elif weight == "n_bins":
+        w = seg_bins.copy()
+    elif weight == "duration":
+        w = (seg_end_t - seg_start_t).astype(float)
+    else:
+        raise ValueError("weight must be 'n_trials', 'n_bins', or 'duration'.")
+
+    # Segments are already chronological by construction, but keep this explicit & safe
+    order = np.argsort(seg_start_t, kind="mergesort")
+    seg_start_t = seg_start_t[order]
+    seg_end_t = seg_end_t[order]
+    w = w[order]
+
+    # map original segment indices -> ordered indices (for back-mapping)
+    inv_order = np.empty_like(order)
+    inv_order[order] = np.arange(nseg)
+
+    # p[j] = last i<j with seg_end_t[i] <= seg_start_t[j] - min_time
+    cutoff = seg_start_t - float(min_time)
+    p = np.searchsorted(seg_end_t, cutoff, side="right") - 1
+
+    dp = np.zeros(nseg, dtype=float if weight == "duration" else int)
+    take = np.zeros(nseg, dtype=bool)
+
+    for j in range(nseg):
+        incl = w[j] + (dp[p[j]] if p[j] >= 0 else 0)
+        excl = dp[j - 1] if j > 0 else 0
+        if incl > excl:
+            dp[j] = incl
+            take[j] = True
+        else:
+            dp[j] = excl
+            take[j] = False
+
+    keep_ord = np.zeros(nseg, dtype=bool)
+    j = nseg - 1
+    while j >= 0:
+        if take[j]:
+            keep_ord[j] = True
+            j = p[j]
+        else:
+            j -= 1
+
+    # translate kept segments back to original segment ids
+    keep_orig = keep_ord[inv_order]
+
+    # build final mask: valid bins that belong to kept segments
+    keep_mask = valid & (seg_id != -1) & keep_orig[seg_id.clip(min=0)]
+    return keep_mask
+
+
 # Analysis
+
 
 def hamming_distance(x, y):
     d = [x[i] != y[i] for i in range(len(x))]
@@ -780,7 +926,7 @@ def visualize_data_vs_null(data, null, value, ax=None):
     if ax is None:
         f, ax = plt.subplots(figsize=(6, 3))
     kde = scipy.stats.gaussian_kde(null)
-    null_x = np.linspace(np.nanmean(null)-5*np.nanstd(null), np.nanmean(null)+5*np.nanstd(null), 100)
+    null_x = np.linspace(np.nanmean(null) - 5 * np.nanstd(null), np.nanmean(null) + 5 * np.nanstd(null), 100)
     null_y = kde(null_x)
     ax.plot(null_x, null_y, color='k', alpha=0.5)
     ax.fill_between(null_x, null_y, color='k', alpha=0.3)
@@ -797,6 +943,7 @@ def visualize_data_vs_null(data, null, value, ax=None):
     ax.plot(null, np.zeros(len(null)), linestyle='', marker='|', color='k')
     _ = ax.plot([null_mean, null_mean], [0, kde(null_mean)[0]], color='k', linestyle='--')
     return z, p
+
 
 # CM viz
 
@@ -1024,8 +1171,7 @@ def box_comparison_two(A, B, labelA, labelB, quantity, force=False, swarm=False,
 
 
 def generate_synthetic_data(n_neurons=50, n_trials=50, timebins_per_trial=5, keyA='stimulus', keyB='action',
-                           rateA=0.1, rateB=0.1, corrAB=0, scale=1, meanfr=0.1, mixing_factor=0., mixed_term=0.):
-
+                            rateA=0.1, rateB=0.1, corrAB=0, scale=1, meanfr=0.1, mixing_factor=0., mixed_term=0.):
     session = {}
 
     # sample correlated labels
@@ -1047,19 +1193,19 @@ def generate_synthetic_data(n_neurons=50, n_trials=50, timebins_per_trial=5, key
     rates = np.random.lognormal(meanfr, scale, n_neurons)
     rA = np.random.randn(n_neurons) * rateA
     rB = np.random.randn(n_neurons) * rateB
-    rC = np.random.randn(n_neurons) * (rateB+rateA)/2.
+    rC = np.random.randn(n_neurons) * (rateB + rateA) / 2.
 
     # sample activity
     raster = []
     for n in range(n_neurons):
-        x = np.zeros(n_trials*timebins_per_trial)
+        x = np.zeros(n_trials * timebins_per_trial)
         for A in [-1, 1]:
             for B in [-1, 1]:
                 mask = (behavior_B == B) & (behavior_A == A)
-                if n > n_neurons/2:
-                    f = (1 - mixing_factor) * rA[n] * A + mixing_factor * rB[n] * B + rA[n] * (A*B) * mixed_term
+                if n > n_neurons / 2:
+                    f = (1 - mixing_factor) * rA[n] * A + mixing_factor * rB[n] * B + rA[n] * (A * B) * mixed_term
                 else:
-                    f = (1 - mixing_factor) * rB[n] * B + mixing_factor * rA[n] * A + rB[n] * (A*B) * mixed_term
+                    f = (1 - mixing_factor) * rB[n] * B + mixing_factor * rA[n] * A + rB[n] * (A * B) * mixed_term
                 f -= 2 * np.min(np.hstack([rA, rB]))
                 if f < 0:
                     f = 0
@@ -1079,14 +1225,13 @@ def generate_synthetic_data(n_neurons=50, n_trials=50, timebins_per_trial=5, key
 
 
 def visualize_synthetic_data(session):
-
     keys = [k for k in session.keys() if k != 'raster' and k != 'trial']
     frA0 = np.nanmean(session['raster'][session[keys[0]] == -1], 0)
     frA1 = np.nanmean(session['raster'][session[keys[0]] == 1], 0)
     frB0 = np.nanmean(session['raster'][session[keys[1]] == -1], 0)
     frB1 = np.nanmean(session['raster'][session[keys[1]] == 1], 0)
-    selA = np.abs(frA1 - frA0)/(frA1 + frA0)
-    selB = np.abs(frB1 - frB0)/(frB1 + frB0)
+    selA = np.abs(frA1 - frA0) / (frA1 + frA0)
+    selB = np.abs(frB1 - frB0) / (frB1 + frB0)
     order = np.argsort(selA - selB)
 
     f, axs = plt.subplots(4, 1, figsize=(10, 10), gridspec_kw={'height_ratios': [6, 0.75, 1, 1]})
@@ -1098,7 +1243,7 @@ def visualize_synthetic_data(session):
 
     for i in range(int(n_neurons)):
         xval = np.where(activity[:, i] > 0)[0]
-        axs[0].scatter(xval, np.ones(len(xval))*i, color='k', marker='|', alpha=0.5)
+        axs[0].scatter(xval, np.ones(len(xval)) * i, color='k', marker='|', alpha=0.5)
         # nanact = np.copy(activity[:, i])
         # nanact[nanact == 0] = np.nan
         # axs[0].plot(i + (nanact>0), marker='|', linestyle='', color='k', alpha=0.5, markersize=3)
@@ -1140,7 +1285,7 @@ def generate_synthetic_data_intime(n_neurons=50, min_time=-10, max_time=10, sign
 
         data['raster'].append(trial_raster)
         data['time_from_onset'].append(trial_time)
-        data['trial'].append(np.ones(len(trial_time))*trial)
+        data['trial'].append(np.ones(len(trial_time)) * trial)
         data['stimulus'].append(np.repeat('A', len(trial_time)))
 
     # sampling B trials
@@ -1168,4 +1313,3 @@ def generate_synthetic_data_intime(n_neurons=50, min_time=-10, max_time=10, sign
     data['stimulus'] = np.hstack(data['stimulus'])
 
     return data
-
