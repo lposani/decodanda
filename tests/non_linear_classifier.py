@@ -42,10 +42,6 @@ def test_non_linear_decoder():
 
     assert z_pval(res, null)[1] < 0.05, "XOR should be decodable with a cubic SVC in a low-Dim geometry."
 
-    plot_perfs_null_model_single(res, null, x=1, ax=ax)
-
-    f.savefig('./figures/non_linear_classifier.pdf')
-
 
 if __name__ == "__main__":
     test_non_linear_decoder()

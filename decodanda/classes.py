@@ -41,7 +41,6 @@ class Decodanda:
                  min_time_separation: Optional[float] = None,
                  time_attr: Optional[str] = None,
                  trial_chunk: Optional[int] = None,
-                 exclude_contiguous_chunks: bool = False,
                  exclude_silent: bool = False,
                  verbose: bool = False,
                  zscore: bool = False,
@@ -114,12 +113,6 @@ class Decodanda:
             Only used when ``trial_attr=None``. The maximum number of consecutive data points
             within the same bout. Bouts longer than ``trial_chunk`` data points are split into
             different trials.
-
-        exclude_contiguous_chunks
-            Only used when ``trial_attr=None`` and ``trial_chunks != None``. Discards every second trial
-            that has the same value of all variables as the previous one. It can be useful to avoid
-            decoding temporal artifacts when there are long auto-correlation times in the neural
-            activations.
 
         exclude_silent
             If ``True``, all silent population vectors (only zeros) are excluded from the analysis.
@@ -256,7 +249,6 @@ class Decodanda:
         self._trial_chunk = trial_chunk
         self._min_time_separation = min_time_separation
         self._time_attr = time_attr
-        self._exclude_contiguous_trials = exclude_contiguous_chunks
         self._trial_average = squeeze_trials
 
         # setting session(s) data
