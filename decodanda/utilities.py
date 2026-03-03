@@ -519,149 +519,149 @@ def semantic_score(dic):
     return np.max(fingerprint) * np.sum(fingerprint)
 
 
-import numpy as np
-
 def enforce_min_time_separation(trial_vector, min_time, time_vector, weight="n_trials"):
     """
-    Enforce a minimum time separation between *distinct trial segments*.
+    Select a subset of trial *segments* (contiguous runs with constant trial id) such that:
+      - any two kept segments are separated by at least `min_time` in `time_vector`
+      - the selection maximizes an objective (`weight`)
 
-    Robust to user-provided trial_attr being "weird":
-    - trial ids may repeat in multiple discontiguous segments -> treated as separate segments
-    - NaNs (or -1) indicate invalid/unassigned bins and split segments
-    - trial ids need not be contiguous or sorted in time
+    Invalid bins (never selectable):
+      - trial_vector == -1   (float or int)
+      - NaN trial_vector     (float only)
 
     Parameters
     ----------
-    trial_vector : array-like, shape (T,)
-        Trial id per bin. Can be int (use -1 for invalid) or float (use NaN for invalid).
+    trial_vector : (T,) array-like
+        Trial id per time bin.
     min_time : float
-        Minimum required time gap between the end of one kept segment and the start of the next kept segment.
-        If <= 0, keeps all valid bins.
-    time_vector : array-like, shape (T,)
-        Time for each bin, aligned to trial_vector. Monotonic increasing recommended.
+        Minimum required gap between the end of one kept segment and the start of the next.
+        If <= 0, returns mask of all valid bins.
+    time_vector : (T,) array-like
+        Time coordinate per bin.
     weight : {"n_trials", "n_bins", "duration"}
-        - "n_trials": keep as many segments as possible (minimize deletions). (default)
-        - "n_bins": keep as many bins as possible.
-        - "duration": keep as much time coverage as possible (end-start per segment).
+        Objective to maximize:
+          - "n_trials": keep as many segments as possible (default)
+          - "n_bins": keep as many bins as possible
+          - "duration": keep as much time coverage as possible (end-start per segment)
 
     Returns
     -------
-    keep_mask : np.ndarray of bool, shape (T,)
-        True for bins that belong to kept segments.
+    keep_mask : (T,) bool ndarray
+        True on bins belonging to kept segments.
     """
     tv = np.asarray(trial_vector)
-    t = np.asarray(time_vector)
+    tt = np.asarray(time_vector)
 
-    if tv.ndim != 1 or t.ndim != 1 or tv.shape[0] != t.shape[0]:
-        raise ValueError("enforce_min_time_separation: trial_vector and time_vector must be 1D and same length.")
+    if tv.ndim != 1 or tt.ndim != 1 or tv.shape[0] != tt.shape[0]:
+        raise ValueError("trial_vector and time_vector must be 1D arrays with the same length.")
 
-    # Define invalid bins: NaN (if float) or -1 (common int sentinel)
+    # 1) define which bins are valid candidates
     if np.issubdtype(tv.dtype, np.floating):
-        valid = ~np.isnan(tv)
-        tv_int = np.empty_like(tv, dtype=int)
+        valid = (~np.isnan(tv)) & (tv != -1.0)
+        tv_int = np.full(tv.shape[0], -1, dtype=int)
         tv_int[valid] = tv[valid].astype(int)
-        tv_int[~valid] = -1
         tv = tv_int
     else:
-        valid = tv != -1
+        valid = (tv != -1)
 
     if min_time is None or min_time <= 0:
         return valid.copy()
     if not np.any(valid):
         return np.zeros_like(valid, dtype=bool)
 
-    # Build contiguous segments in TIME ORDER.
-    # A segment is a maximal run of valid bins with constant trial id.
+    # 2) compress time series into contiguous segments of constant trial id
+    #    each segment becomes an interval [start_time, end_time] with a weight
     seg_id = np.full(tv.shape[0], -1, dtype=int)
-    seg_start_t = []
-    seg_end_t = []
-    seg_bins = []
 
-    current_seg = -1
+    starts = []
+    ends = []
+    nbins = []
+
+    current = -1
     prev_trial = None
-    prev_valid = False
+    in_seg = False
 
     for i in range(tv.shape[0]):
         if not valid[i]:
-            prev_valid = False
+            in_seg = False
             prev_trial = None
             continue
 
-        ti = int(tv[i])
-        if (not prev_valid) or (ti != prev_trial):
-            current_seg += 1
-            seg_start_t.append(float(t[i]))
-            seg_end_t.append(float(t[i]))
-            seg_bins.append(1)
+        trial_i = int(tv[i])
+
+        if (not in_seg) or (trial_i != prev_trial):
+            current += 1
+            starts.append(float(tt[i]))
+            ends.append(float(tt[i]))
+            nbins.append(1)
+            in_seg = True
+            prev_trial = trial_i
         else:
-            seg_end_t[current_seg] = float(t[i])
-            seg_bins[current_seg] += 1
+            ends[current] = float(tt[i])
+            nbins[current] += 1
 
-        seg_id[i] = current_seg
-        prev_valid = True
-        prev_trial = ti
+        seg_id[i] = current
 
-    nseg = current_seg + 1
+    nseg = current + 1
     if nseg <= 1:
         return valid.copy()
 
-    seg_start_t = np.asarray(seg_start_t, dtype=float)
-    seg_end_t = np.asarray(seg_end_t, dtype=float)
-    seg_bins = np.asarray(seg_bins, dtype=int)
+    starts = np.asarray(starts, dtype=float)
+    ends = np.asarray(ends, dtype=float)
+    nbins = np.asarray(nbins, dtype=int)
 
-    # Objective weights per segment
     if weight == "n_trials":
         w = np.ones(nseg, dtype=int)
     elif weight == "n_bins":
-        w = seg_bins.copy()
+        w = nbins
     elif weight == "duration":
-        w = (seg_end_t - seg_start_t).astype(float)
+        w = (ends - starts).astype(float)
     else:
-        raise ValueError("weight must be 'n_trials', 'n_bins', or 'duration'.")
+        raise ValueError("weight must be one of: 'n_trials', 'n_bins', 'duration'.")
 
-    # Segments are already chronological by construction, but keep this explicit & safe
-    order = np.argsort(seg_start_t, kind="mergesort")
-    seg_start_t = seg_start_t[order]
-    seg_end_t = seg_end_t[order]
+    # 3) choose a maximum-weight subset of segments with a minimum gap constraint
+    #    (classic weighted interval scheduling with a required gap)
+    order = np.argsort(starts, kind="mergesort")
+    starts = starts[order]
+    ends = ends[order]
     w = w[order]
 
-    # map original segment indices -> ordered indices (for back-mapping)
+    # map back from ordered index -> original segment index
     inv_order = np.empty_like(order)
     inv_order[order] = np.arange(nseg)
 
-    # p[j] = last i<j with seg_end_t[i] <= seg_start_t[j] - min_time
-    cutoff = seg_start_t - float(min_time)
-    p = np.searchsorted(seg_end_t, cutoff, side="right") - 1
+    # p[j] = rightmost segment i<j that ends at least min_time before segment j starts
+    cutoff = starts - float(min_time)
+    p = np.searchsorted(ends, cutoff, side="right") - 1
 
     dp = np.zeros(nseg, dtype=float if weight == "duration" else int)
     take = np.zeros(nseg, dtype=bool)
 
     for j in range(nseg):
-        incl = w[j] + (dp[p[j]] if p[j] >= 0 else 0)
-        excl = dp[j - 1] if j > 0 else 0
-        if incl > excl:
-            dp[j] = incl
+        best_with = w[j] + (dp[p[j]] if p[j] >= 0 else 0)
+        best_without = dp[j - 1] if j > 0 else 0
+        if best_with > best_without:
+            dp[j] = best_with
             take[j] = True
         else:
-            dp[j] = excl
+            dp[j] = best_without
             take[j] = False
 
-    keep_ord = np.zeros(nseg, dtype=bool)
+    keep_ordered = np.zeros(nseg, dtype=bool)
     j = nseg - 1
     while j >= 0:
         if take[j]:
-            keep_ord[j] = True
+            keep_ordered[j] = True
             j = p[j]
         else:
             j -= 1
 
-    # translate kept segments back to original segment ids
-    keep_orig = keep_ord[inv_order]
+    # convert kept segments back to original segment ids
+    keep_orig = keep_ordered[inv_order]
 
-    # build final mask: valid bins that belong to kept segments
+    # 4) expand kept segments back to a per-bin mask
     keep_mask = valid & (seg_id != -1) & keep_orig[seg_id.clip(min=0)]
     return keep_mask
-
 
 # Analysis
 
