@@ -376,7 +376,7 @@ def training_test_block_masks(T, training_fraction, trials, randomstate=None, de
         if debug:
             print("All trials:", unique_trial_numbers)
             print("Testing trials:", testing_trials)
-    testing_mask = np.in1d(trials, testing_trials)
+    testing_mask = np.isin(trials, testing_trials)
     training_mask = testing_mask == 0
     return training_mask, testing_mask
 
