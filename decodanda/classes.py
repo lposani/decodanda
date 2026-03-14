@@ -2218,9 +2218,10 @@ class Decodanda:
                                   p_threshold: float = 0.01,
                                   visualize: bool = True,
                                   semantic_names: Optional[dict] = None,
+                                  max_semantic_dist = 99,
                                   **kwargs):
         """
-        [WIP] This function computes shattering generalization defined as the number of balanced dichotomies that
+        This function computes shattering generalization defined as the number of balanced dichotomies that
         have a above-chance CCGP.
 
         Parameters
@@ -2270,7 +2271,7 @@ class Decodanda:
         for i, dic in tqdm(enumerate(all_dics)):
             res, null = self.CCGP_with_nullmodel(dic, resamplings=2,
                                                  nshuffles=nshuffles, ndata=ndata,
-                                                 max_semantic_dist=99)
+                                                 max_semantic_dist=max_semantic_dist)
 
             perfs[dic_name[i]] = res
             nulls[dic_name[i]] = null
@@ -2312,6 +2313,7 @@ class Decodanda:
             return shattering_gen, perfs, nulls, f
         else:
             return shattering_gen, perfs, nulls
+
 
     def CVI(self, training_fraction: float = 0.75,
             cross_validations: int = 10,
