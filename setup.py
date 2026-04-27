@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.8.5'
+VERSION = '0.8.6'
 DESCRIPTION = 'Geometric decoding of neural data with built-in best practices.'
 LONG_DESCRIPTION = '''
 Decodanda (dog latin for "to be decoded") is a best-practices-made-easy Python package for decoding neural data.

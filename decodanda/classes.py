@@ -1154,11 +1154,9 @@ class Decodanda:
         if ndata is None and self.n_brains > 1:
             ndata = max(self._max_conditioned_data, 2 * self.n_neurons)
 
-        # optional neuron subsampling: set subset once here;
-
-        # null-model shuffling of conditioned arrays (semantic/geometric null)
+        # null-model shuffling of conditioned arrays
         if shuffled:
-            self._shuffle_conditioned_arrays(classes)
+            self._shuffle_conditioned_arrays([[],[]])  # empty dic returns 0 for dic_key so it shuffles as for XORs
 
         performance = []
         CM = []
